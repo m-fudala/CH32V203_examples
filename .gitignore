@@ -1,0 +1,11 @@
+*.hex
+
+# unneeded folders
+.vscode/
+*/build
+
+# WCH files
+*.ld
+*.S
+*core_riscv.?
+*ch32v20x.h
