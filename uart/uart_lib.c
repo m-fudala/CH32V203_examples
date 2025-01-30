@@ -2,9 +2,10 @@
 
 UART uart;
 
-void uart_init() {
+void uart_init(void (*function)(char *, char)) {
     uart.tx_bytes_sent = 0;
     uart.rx_bytes_read = 0;
+    idle_function_pointer = function;
 
     RCC->APB2PCENR |= RCC_USART1EN | RCC_IOPAEN;   // enable USART1 clock,
                                                     // enable port A clock
@@ -42,7 +43,8 @@ void USART1_IRQHandler() {
         USART1->CTLR1 |= USART_CTLR1_IDLEIE;    // enable idle line interrupt
     // idle line (RX done) interrupt
     } else if (USART1->STATR & USART_STATR_IDLE) {
-        uart_send((char *)uart.rx_buffer, uart.rx_bytes_read);
+        // invoke function on the end of the message
+        idle_function_pointer((char *)uart.rx_buffer, uart.rx_bytes_read);
 
         uart.rx_bytes_read = 0;
 

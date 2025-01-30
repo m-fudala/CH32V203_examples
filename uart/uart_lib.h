@@ -20,8 +20,10 @@ typedef struct UART {
     volatile char rx_buffer[RX_BUFFER_LEN]; 
 } UART;
 
-void uart_init();
+void uart_init(void (*function)(char *, char));
 void uart_send(char *bytes, unsigned char bytes_len);
+
+static void (*idle_function_pointer)(char *buffer, char buffer_length);
 
 void USART1_IRQHandler() __attribute__((interrupt()));
 
