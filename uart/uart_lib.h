@@ -9,10 +9,15 @@
 
 #include "ch32v20x.h"
 
+#define RX_BUFFER_LEN 32
+
 typedef struct UART {
     volatile unsigned char tx_bytes_sent;
     volatile unsigned char tx_bytes_to_send;
     volatile char *tx_bytes;
+
+    volatile unsigned char rx_bytes_read;
+    volatile char rx_buffer[RX_BUFFER_LEN]; 
 } UART;
 
 void uart_init();

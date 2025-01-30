@@ -4,6 +4,7 @@ UART uart;
 
 void uart_init() {
     uart.tx_bytes_sent = 0;
+    uart.rx_bytes_read = 0;
 
     RCC->APB2PCENR |= RCC_USART1EN | RCC_IOPAEN;   // enable USART1 clock,
                                                     // enable port A clock
@@ -15,13 +16,15 @@ void uart_init() {
                             // DIV_Mantissa = 12 -> 250000 baud @ 48MHz
 
     // enable RX, TX
-    USART1->CTLR1 = USART_CTLR1_UE | USART_CTLR1_TE | USART_CTLR1_RE;   
+    USART1->CTLR1 = USART_CTLR1_UE | USART_CTLR1_TE | USART_CTLR1_RE;
 
     PFIC->IENR[1] |= 1 << 21;    // enable USART1 global interrupt (53)
     USART1->CTLR1 |= USART_CTLR1_RXNEIE;    // enable RX non-empty interrupt
 }
 
 void uart_send(char *bytes, unsigned char bytes_len) {
+    uart.tx_bytes_sent = 0;
+
     uart.tx_bytes_to_send = bytes_len;
     uart.tx_bytes = bytes;
 
@@ -29,16 +32,33 @@ void uart_send(char *bytes, unsigned char bytes_len) {
 }
 
 void USART1_IRQHandler() {
-    if (USART1->STATR & USART_STATR_TXE) {
+    // RX interrupt
+    if (USART1->STATR & USART_STATR_RXNE) {
+        uart.rx_buffer[uart.rx_bytes_read] = USART1->DATAR;
+
+        ++uart.rx_bytes_read;
+
+        USART1->STATR |= USART_STATR_RXNE;  // clear RXNE flag
+        USART1->CTLR1 |= USART_CTLR1_IDLEIE;    // enable idle line interrupt
+    // idle line (RX done) interrupt
+    } else if (USART1->STATR & USART_STATR_IDLE) {
+        uart_send((char *)uart.rx_buffer, uart.rx_bytes_read);
+
+        uart.rx_bytes_read = 0;
+
+        USART1->DATAR;  // read data register to clear the interrupt
+        USART1->CTLR1 &= ~USART_CTLR1_IDLEIE;   // disable idle line interrupt
+    // TX interrupt
+    // cannot seem to clear TXE flag, so TX has to be the last else if
+    } else if (USART1->STATR & USART_STATR_TXE) {
         // put a byte into data register
-        USART1->DATAR = uart.tx_bytes[uart.tx_bytes_sent];
+        USART1->DATAR = *(uart.tx_bytes + uart.tx_bytes_sent);
 
         ++uart.tx_bytes_sent;
 
-        if (uart.tx_bytes_sent == uart.tx_bytes_to_send) {
+        if (uart.tx_bytes_sent == uart.tx_bytes_to_send) {  
             USART1->CTLR1 &= ~USART_CTLR1_TXEIE;    // disable TX interrupt
                                                     // when all bytes are sent
-            uart.tx_bytes_sent = 0;
         }
     }
 }

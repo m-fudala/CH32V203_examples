@@ -11,10 +11,11 @@ void clock_init(void);
 int main(void) {
     clock_init();
 
+    // initialize registers for UART to work
     uart_init();
 
+    // send a message
     char message[] = "Hello\r\n";
-
     uart_send(message, 7);
 
     while(1);
