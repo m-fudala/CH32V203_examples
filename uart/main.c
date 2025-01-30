@@ -8,13 +8,23 @@
 
 void clock_init(void);
 
+void uart_parse(char *buffer, char buffer_length);
+
+// react to incoming bytes here
+void uart_parse(char *buffer, char buffer_length) {
+    // just echo the message back
+    uart_send(buffer, buffer_length);
+}
+
 int main(void) {
     clock_init();
 
-    uart_init();
+    // initialize registers for UART to work and specify function that is
+    // going to be executed on incoming bytes
+    uart_init(uart_parse);
 
+    // send a message
     char message[] = "Hello\r\n";
-
     uart_send(message, 7);
 
     while(1);
