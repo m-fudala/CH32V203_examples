@@ -1,5 +1,5 @@
 CC = riscv-none-elf-
-CFLAGS = -c -march=rv32imac -mabi=ilp32
+CFLAGS = -c -march=rv32imac -mabi=ilp32 -ggdb -O0
 
 BUILD_DIR = build
 
