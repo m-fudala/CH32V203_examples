@@ -11,6 +11,13 @@ void clock_init(void);
 int main(void) {
     clock_init();
 
+    // initialize I2C
+    i2c_master_init();
+
+    // send a message
+    char message[] = "Hello world!";
+    i2c_master_send(0xE << 1, message, 12);
+
     while(1);
 }
 
