@@ -9,4 +9,10 @@
 
 #include "ch32v20x.h"
 
+void i2c_master_init(void);
+void i2c_slave_init(char address);
+
+void I2C1_EV_IRQHandler(void) __attribute__((interrupt()));
+void I2C1_ER_IRQHandler(void) __attribute__((interrupt()));
+
 #endif
