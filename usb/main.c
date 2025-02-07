@@ -11,6 +11,8 @@ void clock_init(void);
 int main(void) {
     clock_init();
 
+    usb_init();
+
     while(1);
 }
 
