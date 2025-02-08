@@ -25,6 +25,21 @@
 // R8_UDEV_CTRL bits
 #define USBFSD_RB_UD_PORT_EN            (1 << 0)
 
+// R8_USB_INT_EN bits
+#define USBFSD_RB_UIE_DEV_NAK           (1 << 6)
+#define USBFSD_RB_UIE_FIFO_OV           (1 << 4)
+#define USBFSD_RB_UIE_SUSPEND           (1 << 2)
+#define USBFSD_RB_UIE_TRANSFER          (1 << 1)
+#define USBFSD_RB_UIE_BUS_RST           (1 << 0)
+
+// R8_USB_DEV_AD
+#define MASK_USB_ADDR                   (0x7F)
+
 void usb_init(void);
+
+void USB_HP_CAN1_TX_IRQHandler(void) __attribute__((interrupt()));
+void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((interrupt()));
+void USBFS_IRQHandler(void) __attribute__((interrupt()));
+void USBFSWakeUp_IRQHandler(void) __attribute__((interrupt()));
 
 #endif
