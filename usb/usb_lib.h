@@ -19,26 +19,42 @@
 #define USBFS_DEFAULT_BUFFER_SIZE       64
 
 // R8_USB_CTRL bits
-#define USBFSD_USBD_EN_PULLUP_EN        (2 << 4)
-#define USBFSD_RB_UC_INT_BUSY           (1 << 3)
-#define USBFSD_RB_UC_RESET_SIE          (1 << 2)
-#define USBFSD_RB_UC_CLR_ALL            (1 << 1)
+#define USBD_EN_PULLUP_EN               (2 << 4)
+#define RB_UC_INT_BUSY                  (1 << 3)
+#define RB_UC_RESET_SIE                 (1 << 2)
+#define RB_UC_CLR_ALL                   (1 << 1)
 
 // R8_UDEV_CTRL bits
-#define USBFSD_RB_UD_PORT_EN            (1 << 0)
+#define RB_UD_PORT_EN                   (1 << 0)
 
 // R8_USB_INT_EN bits
-#define USBFSD_RB_UIE_DEV_NAK           (1 << 6)
-#define USBFSD_RB_UIE_FIFO_OV           (1 << 4)
-#define USBFSD_RB_UIE_SUSPEND           (1 << 2)
-#define USBFSD_RB_UIE_TRANSFER          (1 << 1)
-#define USBFSD_RB_UIE_BUS_RST           (1 << 0)
+#define RB_UIE_DEV_NAK                  (1 << 6)
+#define RB_UIE_FIFO_OV                  (1 << 4)
+#define RB_UIE_SUSPEND                  (1 << 2)
+#define RB_UIE_TRANSFER                 (1 << 1)
+#define RB_UIE_BUS_RST                  (1 << 0)
 
 // R8_USB_DEV_AD
 #define MASK_USB_ADDR                   (0x7F)
 
 // R8_USB_INT_FG bits
+#define RB_U_IS_NAK                     (1 << 7)
+#define RB_U_TOG_OK                     (1 << 6)
+#define RB_U_SIE_FREE                   (1 << 5)
+#define RB_UIF_FIFO_OV                  (1 << 4)
+#define RB_UIF_HST_SOF                  (1 << 3)
+#define RB_UIF_SUSPEND                  (1 << 2)
+#define RB_UIF_TRANSFER                 (1 << 1)
 #define RB_UIF_BUS_RST                  (1 << 0)
+
+// R8_USB_INT_ST bits
+#define RB_UIS_IS_NAK                   (1 << 7)
+#define RB_UIS_TOG_OK                   (1 << 6)
+#define MASK_UIS_TOKEN                  (3 << 4)
+#define MASK_UIS_ENDP                   (0xF)
+#define UIS_TOKEN_OUT                   (0x0)
+#define UIS_TOKEN_IN                    (0x2)
+#define UIS_TOKEN_SETUP                 (0x3)
 
 // R8_UEPn_TX_CTRL bits
 #define RB_UEP_T_AUTO_TOG               (1 << 3)
