@@ -17,12 +17,14 @@
 #include "ch32v20x.h"
 
 #define USBFS_DEFAULT_BUFFER_SIZE       64
+#define USBFS_DEFAULT_ADDRESS           0
 
 // R8_USB_CTRL bits
 #define USBD_EN_PULLUP_EN               (2 << 4)
 #define RB_UC_INT_BUSY                  (1 << 3)
 #define RB_UC_RESET_SIE                 (1 << 2)
 #define RB_UC_CLR_ALL                   (1 << 1)
+#define RB_UC_DMA_EN                    (1 << 0)
 
 // R8_UDEV_CTRL bits
 #define RB_UD_PORT_EN                   (1 << 0)
@@ -35,7 +37,7 @@
 #define RB_UIE_BUS_RST                  (1 << 0)
 
 // R8_USB_DEV_AD
-#define MASK_USB_ADDR                   (0x7F)
+#define MASK_USB_ADDR                   0x7F
 
 // R8_USB_INT_FG bits
 #define RB_U_IS_NAK                     (1 << 7)
@@ -51,41 +53,72 @@
 #define RB_UIS_IS_NAK                   (1 << 7)
 #define RB_UIS_TOG_OK                   (1 << 6)
 #define MASK_UIS_TOKEN                  (3 << 4)
-#define MASK_UIS_ENDP                   (0xF)
-#define UIS_TOKEN_OUT                   (0x0)
-#define UIS_TOKEN_IN                    (0x2)
-#define UIS_TOKEN_SETUP                 (0x3)
+#define MASK_UIS_ENDP                   0xF
+#define UIS_TOKEN_OUT                   0x0
+#define UIS_TOKEN_IN                    0x2
+#define UIS_TOKEN_SETUP                 0x3
 
 // R8_UEPn_TX_CTRL bits
 #define RB_UEP_T_AUTO_TOG               (1 << 3)
 #define RB_UEP_T_TOG                    (1 << 2)
-#define TX_D0_D1_READY_ACK_EXPECTED     (0x0)
-#define TX_D0_D1_REPLY_NO_RESP_EXPECTED (0x1)
-#define TX_ANSWER_NAK                   (0x2)
-#define TX_ANSWER_STALL                 (0x3)
+#define TX_D0_D1_READY_ACK_EXPECTED     0x0
+#define TX_D0_D1_REPLY_NO_RESP_EXPECTED 0x1
+#define TX_ANSWER_NAK                   0x2
+#define TX_ANSWER_STALL                 0x3
 
 // R8_UEPn_RX_CTRL bits
 #define RB_UEP_R_AUTO_TOG               (1 << 3)
 #define RB_UEP_R_TOG                    (1 << 2)
-#define RX_ANSWER_ACK                   (0x0)
-#define RX_TIMEOUT_NO_RESPONSE          (0x1)
-#define RX_ANSWER_NAK                   (0x2)
-#define RX_ANSWER_STALL                 (0x3)
+#define RX_ANSWER_ACK                   0x0
+#define RX_TIMEOUT_NO_RESPONSE          0x1
+#define RX_ANSWER_NAK                   0x2
+#define RX_ANSWER_STALL                 0x3
 
 // R8_UEP4_1_MOD bits
 #define RB_UEP1_RX_EN                   (1 << 7)
 #define RB_UEP1_TX_EN                   (1 << 6)
 #define RB_UEP1_BUF_MOD                 (1 << 4)
 
+typedef struct USBSetupRequest {
+    struct {
+        unsigned char transfer_direction : 1;
+        unsigned char type : 2;
+        unsigned char recipent : 5;
+    } bmRequestType;
+
+    unsigned char bRequest;
+    unsigned short wValue;
+    unsigned short wIndex;
+    unsigned short wLength;
+} USBSetupRequest;
+
+#define USB_SETUP_REQUEST_TYPE_DIR                  (1 << 7)
+#define GET_USB_SETUP_REQUEST_TYPE_DIR(X)           \
+            (((X) & USB_SETUP_REQUEST_TYPE_DIR) >> 7)
+#define USB_SETUP_REQUEST_TYPE_DIR_HOST_DEVICE      0
+#define USB_SETUP_REQUEST_TYPE_DIR_DEVICE_HOST      1
+#define USB_SETUP_REQUEST_TYPE_TYPE                 (3 << 5)
+#define GET_USB_SETUP_REQUEST_TYPE_TYPE(X)          \
+            (((X) & USB_SETUP_REQUEST_TYPE_TYPE) >> 5)
+#define USB_SETUP_REQUEST_TYPE_TYPE_STANDARD        0
+#define USB_SETUP_REQUEST_TYPE_TYPE_CLASS           1
+#define USB_SETUP_REQUEST_TYPE_TYPE_VENDOR          2
+#define USB_SETUP_REQUEST_TYPE_REC                  (0x1F << 0)
+#define GET_USB_SETUP_REQUEST_TYPE_REC(X)           \
+            ((X) & USB_SETUP_REQUEST_TYPE_REC)
+#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           0
+#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           1
+#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           2
+#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           3
+
 void usb_init(void);
+
+void set_address(unsigned char address);
 
 void configure_endpoint0(void);
 void deconfigure_endpoint1(void);
 void configure_endpoint1(void);
 
-void USB_HP_CAN1_TX_IRQHandler(void) __attribute__((interrupt()));
-void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((interrupt()));
 void USBFS_IRQHandler(void) __attribute__((interrupt()));
-void USBFSWakeUp_IRQHandler(void) __attribute__((interrupt()));
 
 #endif

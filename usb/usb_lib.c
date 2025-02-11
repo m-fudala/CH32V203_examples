@@ -15,8 +15,8 @@ void usb_init(void) {
 
     RCC->AHBPCENR |= RCC_USBFS;     // enable USB FS clock
 
-    // enable device mode and internal pull-up 
-    USBFSD->BASE_CTRL |= USBD_EN_PULLUP_EN | RB_UC_INT_BUSY;
+    // enable device mode, internal pull-up and DMA
+    USBFSD->BASE_CTRL |= USBD_EN_PULLUP_EN | RB_UC_INT_BUSY | RB_UC_DMA_EN;
 
     // enable interrupts
     PFIC->IENR[1] |= (3 << 3) | (3 << 27);  // enable USB HP/LP (35,36), USBFS
@@ -32,9 +32,6 @@ void usb_init(void) {
 
     USBFSD->INT_FG |= 0x1F;     // clear interrupts
 
-    // set default address
-    USBFSD->DEV_ADDR &= ~(MASK_USB_ADDR);
-
     // enable device physical port
     USBFSD->UDEV_CTRL |= RB_UD_PORT_EN;
 
@@ -42,11 +39,20 @@ void usb_init(void) {
     USBFSD->BASE_CTRL &= ~(RB_UC_RESET_SIE | RB_UC_CLR_ALL);
 }
 
+void set_address(unsigned char address) {
+    if (address) {
+        USBFSD->DEV_ADDR |= address;
+    } else {
+        // set default address
+        USBFSD->DEV_ADDR &= ~(MASK_USB_ADDR);
+    }
+}
+
 void configure_endpoint0(void) {
     USBFSD->UEP0_DMA = (int)endpoint0_buffer;
 
-    USBFSD->UEP0_TX_CTRL |= RB_UEP_T_AUTO_TOG | TX_ANSWER_NAK;
-    USBFSD->UEP0_RX_CTRL |= RB_UEP_R_AUTO_TOG | RX_ANSWER_NAK;
+    USBFSD->UEP0_TX_CTRL |= RB_UEP_T_AUTO_TOG | TX_D0_D1_READY_ACK_EXPECTED;
+    USBFSD->UEP0_RX_CTRL |= RB_UEP_R_AUTO_TOG | RX_ANSWER_ACK;
 }
 
 void deconfigure_endpoint1(void) {
@@ -61,22 +67,16 @@ void configure_endpoint1(void) {
     // enable IN endpoint
     USBFSD->UEP4_1_MOD |= RB_UEP1_TX_EN;
 
-    USBFSD->UEP1_TX_CTRL |= RB_UEP_T_AUTO_TOG | TX_ANSWER_NAK;
-    USBFSD->UEP1_RX_CTRL |= RB_UEP_R_AUTO_TOG | RX_ANSWER_NAK;
-}
-
-void USB_HP_CAN1_TX_IRQHandler(void) {
-
-}
-
-void USB_LP_CAN1_RX0_IRQHandler(void) {
-
+    USBFSD->UEP1_TX_CTRL |= RB_UEP_T_AUTO_TOG | TX_D0_D1_READY_ACK_EXPECTED;
+    USBFSD->UEP1_RX_CTRL |= RB_UEP_R_AUTO_TOG | RX_ANSWER_ACK;
 }
 
 void USBFS_IRQHandler(void) {
     volatile int usb_interrupt_flags = USBFSD->INT_FG;  // read the status
 
     if (usb_interrupt_flags & RB_UIF_BUS_RST) {
+        set_address(USBFS_DEFAULT_ADDRESS);
+        
         // TODO: deconfigure more endpoints
         deconfigure_endpoint1();   
         configure_endpoint0();
@@ -94,7 +94,7 @@ void USBFS_IRQHandler(void) {
         switch (current_token) {
             case UIS_TOKEN_OUT: {
 
-                
+
                 break;
             }
 
@@ -113,8 +113,4 @@ void USBFS_IRQHandler(void) {
 
         USBFSD->INT_FG |= RB_UIF_TRANSFER;   // clear interrupt
     }
-}
-
-void USBFSWakeUp_IRQHandler(void) {
-
 }
