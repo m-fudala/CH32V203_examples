@@ -122,6 +122,20 @@ void USBFS_IRQHandler(void) {
                 request.wLength = (unsigned short)((endpoint0_buffer[6] << 8) |
                         endpoint0_buffer[7]);
 
+                switch (request.bRequest) {
+                    case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
+                        switch (request.wValue) {
+                            case DESC_TYPE_DEVICE: {
+                                
+                                
+                                break;
+                            } 
+                        }
+                        
+                        break;
+                    }
+                }
+
                 break;
             }
         }
