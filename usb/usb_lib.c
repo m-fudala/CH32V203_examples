@@ -105,7 +105,22 @@ void USBFS_IRQHandler(void) {
             }
 
             case UIS_TOKEN_SETUP: {
+                USBSetupRequest request;
 
+                request.bmRequestType.transfer_direction = 
+                        GET_USB_SETUP_REQUEST_TYPE_DIR(endpoint0_buffer[0]);
+                request.bmRequestType.type = 
+                        GET_USB_SETUP_REQUEST_TYPE_TYPE(endpoint0_buffer[0]);
+                request.bmRequestType.recipent = 
+                        GET_USB_SETUP_REQUEST_TYPE_REC(endpoint0_buffer[0]);
+
+                request.bRequest = endpoint0_buffer[1];
+                request.wValue = (unsigned short)((endpoint0_buffer[2] << 8) |
+                        endpoint0_buffer[3]);
+                request.wIndex = (unsigned short)((endpoint0_buffer[4] << 8) |
+                        endpoint0_buffer[5]);
+                request.wLength = (unsigned short)((endpoint0_buffer[6] << 8) |
+                        endpoint0_buffer[7]);
 
                 break;
             }

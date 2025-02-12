@@ -79,6 +79,7 @@
 #define RB_UEP1_TX_EN                   (1 << 6)
 #define RB_UEP1_BUF_MOD                 (1 << 4)
 
+// structure of USB setup packet
 typedef struct USBSetupRequest {
     struct {
         unsigned char transfer_direction : 1;
@@ -92,6 +93,7 @@ typedef struct USBSetupRequest {
     unsigned short wLength;
 } USBSetupRequest;
 
+// setup packet defines
 #define USB_SETUP_REQUEST_TYPE_DIR                  (1 << 7)
 #define GET_USB_SETUP_REQUEST_TYPE_DIR(X)           \
             (((X) & USB_SETUP_REQUEST_TYPE_DIR) >> 7)
@@ -107,9 +109,19 @@ typedef struct USBSetupRequest {
 #define GET_USB_SETUP_REQUEST_TYPE_REC(X)           \
             ((X) & USB_SETUP_REQUEST_TYPE_REC)
 #define USB_SETUP_REQUEST_TYPE_REC_DEVICE           0
-#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           1
-#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           2
-#define USB_SETUP_REQUEST_TYPE_REC_DEVICE           3
+#define USB_SETUP_REQUEST_TYPE_REC_INTERFACE        1
+#define USB_SETUP_REQUEST_TYPE_REC_ENDPOINT         2
+#define USB_SETUP_REQUEST_TYPE_REC_OTHER            3
+
+// standard device requests
+#define SETUP_DEVICE_REQS_GET_STATUS                0x0
+#define SETUP_DEVICE_REQS_CLEAR_FEATURE             0x1
+#define SETUP_DEVICE_REQS_SET_FEATURE               0x3
+#define SETUP_DEVICE_REQS_SET_ADDRESS               0x5
+#define SETUP_DEVICE_REQS_GET_DESCRIPTOR            0x6
+#define SETUP_DEVICE_REQS_SET_DESCRIPTOR            0x7
+#define SETUP_DEVICE_REQS_GET_CONFIGURATION         0x8
+#define SETUP_DEVICE_REQS_SET_CONFIGURATION         0x9
 
 void usb_init(void);
 
