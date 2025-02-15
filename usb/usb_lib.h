@@ -16,6 +16,7 @@
 
 #include "ch32v20x.h"
 #include "usb_standards.h"
+#include "usb_descriptors.h"
 
 #define USBFS_DEFAULT_BUFFER_SIZE       64
 #define USBFS_DEFAULT_ADDRESS           0

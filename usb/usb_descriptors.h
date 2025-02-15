@@ -3,7 +3,7 @@
 
 #include "usb_standards.h"
 
-const USBDeviceDescriptor device_descriptor {
+const USBDeviceDescriptor device_descriptor = {
     .bLength = sizeof(USBDeviceDescriptor),
     .bDescriptorType = DESC_TYPE_DEVICE,
     .bcdUSB = 0x0200,
@@ -18,6 +18,10 @@ const USBDeviceDescriptor device_descriptor {
     .iProduct = 0,
     .iSerialNumber = 0,
     .bNumConfigurations = 1
+};
+
+union USBDeviceDescriptorUnion device_descriptor_union = {
+    .device_descriptor_u = device_descriptor
 };
 
 #endif

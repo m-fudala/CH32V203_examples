@@ -78,6 +78,11 @@ typedef struct USBDeviceDescriptor {
     unsigned char bNumConfigurations;
 } USBDeviceDescriptor;
 
+union USBDeviceDescriptorUnion {
+    unsigned char device_descriptor_bytes[sizeof(USBDeviceDescriptor)];
+    USBDeviceDescriptor device_descriptor_u;
+};
+
 // USB device classes
 #define DEVICE_CLASS_PER_INTERFACE                  0x00
 #define DEVICE_CLASS_AUDIO                          0x01

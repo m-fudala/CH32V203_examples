@@ -16,7 +16,7 @@ void usb_init(void) {
     RCC->AHBPCENR |= RCC_USBFS;     // enable USB FS clock
 
     // enable device mode, internal pull-up and DMA
-    USBFSD->BASE_CTRL |= USBD_EN_PULLUP_EN | RB_UC_INT_BUSY | RB_UC_DMA_EN;
+    USBFSD->BASE_CTRL |= USBD_EN_PULLUP_EN | RB_UC_DMA_EN;
 
     // enable interrupts
     PFIC->IENR[1] |= (3 << 3) | (3 << 27);  // enable USB HP/LP (35,36), USBFS
@@ -32,11 +32,11 @@ void usb_init(void) {
 
     USBFSD->INT_FG |= 0x1F;     // clear interrupts
 
-    // enable device physical port
-    USBFSD->UDEV_CTRL |= RB_UD_PORT_EN;
-
     // clear resets
     USBFSD->BASE_CTRL &= ~(RB_UC_RESET_SIE | RB_UC_CLR_ALL);
+
+    // enable device physical port
+    USBFSD->UDEV_CTRL |= RB_UD_PORT_EN;
 }
 
 void set_address(unsigned char address) {
@@ -51,8 +51,8 @@ void set_address(unsigned char address) {
 void configure_endpoint0(void) {
     USBFSD->UEP0_DMA = (int)endpoint0_buffer;
 
-    USBFSD->UEP0_TX_CTRL |= RB_UEP_T_AUTO_TOG | TX_D0_D1_READY_ACK_EXPECTED;
-    USBFSD->UEP0_RX_CTRL |= RB_UEP_R_AUTO_TOG | RX_ANSWER_ACK;
+    USBFSD->UEP0_TX_CTRL |= TX_ANSWER_NAK;
+    USBFSD->UEP0_RX_CTRL |= RX_ANSWER_ACK;
 }
 
 void deconfigure_endpoint1(void) {
@@ -78,14 +78,12 @@ void USBFS_IRQHandler(void) {
         set_address(USBFS_DEFAULT_ADDRESS);
         
         // TODO: deconfigure more endpoints
-        deconfigure_endpoint1();   
+        // deconfigure_endpoint1();   
         configure_endpoint0();
-        configure_endpoint1();     
+        // configure_endpoint1();     
 
         USBFSD->INT_FG |= RB_UIF_BUS_RST;   // clear interrupt
     } else if (usb_interrupt_flags & RB_UIF_TRANSFER) {
-        configure_endpoint0();
-
         volatile int usb_interrupt_status = USBFSD->INT_ST;
         int current_token = (usb_interrupt_status & MASK_UIS_TOKEN) >> 4;
         int current_endpoint = usb_interrupt_status & MASK_UIS_ENDP;
@@ -105,6 +103,8 @@ void USBFS_IRQHandler(void) {
             }
 
             case UIS_TOKEN_SETUP: {
+                USBFSD->UEP0_RX_CTRL |= RX_ANSWER_NAK;
+
                 USBSetupRequest request;
 
                 request.bmRequestType.transfer_direction = 
@@ -126,15 +126,37 @@ void USBFS_IRQHandler(void) {
                     case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
                         switch (request.wValue) {
                             case DESC_TYPE_DEVICE: {
-                                
+                                unsigned char descriptor_size = 
+                                        sizeof(device_descriptor_union.
+                                            device_descriptor_u);
+
+                                for (unsigned char byte = 0;
+                                        byte < 64; byte++) {
+                                    if (byte < descriptor_size) {
+                                        endpoint0_buffer[byte] =
+                                            device_descriptor_union.
+                                                device_descriptor_bytes
+                                                [byte];
+                                    } else {
+                                        endpoint0_buffer[byte] = 0;
+                                    }                                 
+                                }
+
+                                USBFSD->UEP0_TX_LEN = 64;
+                                USBFSD->UEP0_TX_CTRL =
+                                        TX_D0_D1_READY_ACK_EXPECTED;
+                                USBFSD->UEP0_TX_CTRL ^=
+                                        RB_UEP_T_TOG;
                                 
                                 break;
-                            } 
+                            }
                         }
                         
                         break;
                     }
                 }
+
+                USBFSD->UEP0_RX_CTRL |= RX_ANSWER_ACK;
 
                 break;
             }
