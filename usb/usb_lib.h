@@ -16,7 +16,6 @@
 
 #include "ch32v20x.h"
 #include "usb_standards.h"
-#include "usb_descriptors.h"
 
 #define USBFS_DEFAULT_BUFFER_SIZE       64
 #define USBFS_DEFAULT_ADDRESS           0
@@ -63,7 +62,7 @@
 // R8_UEPn_TX_CTRL bits
 #define RB_UEP_T_AUTO_TOG               (1 << 3)
 #define RB_UEP_T_TOG                    (1 << 2)
-#define TX_D0_D1_READY_ACK_EXPECTED     0x0
+#define TX_D0_D1_READY_ACK_EXPECTED     ~(0x3)
 #define TX_D0_D1_REPLY_NO_RESP_EXPECTED 0x1
 #define TX_ANSWER_NAK                   0x2
 #define TX_ANSWER_STALL                 0x3
@@ -71,7 +70,7 @@
 // R8_UEPn_RX_CTRL bits
 #define RB_UEP_R_AUTO_TOG               (1 << 3)
 #define RB_UEP_R_TOG                    (1 << 2)
-#define RX_ANSWER_ACK                   0x0
+#define RX_ANSWER_ACK                   ~(0x3)
 #define RX_TIMEOUT_NO_RESPONSE          0x1
 #define RX_ANSWER_NAK                   0x2
 #define RX_ANSWER_STALL                 0x3
@@ -81,6 +80,11 @@
 #define RB_UEP1_TX_EN                   (1 << 6)
 #define RB_UEP1_BUF_MOD                 (1 << 4)
 
+typedef struct USB {
+    volatile unsigned char tx_bytes_to_send;
+    volatile unsigned char *tx_pointer;
+} USB;
+
 void usb_init(void);
 
 void set_address(unsigned char address);
@@ -88,6 +92,8 @@ void set_address(unsigned char address);
 void configure_endpoint0(void);
 void deconfigure_endpoint1(void);
 void configure_endpoint1(void);
+
+void write_bytes_endpoint0(void);
 
 void USBFS_IRQHandler(void) __attribute__((interrupt()));
 

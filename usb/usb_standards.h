@@ -76,12 +76,7 @@ typedef struct USBDeviceDescriptor {
     unsigned char iProduct;
     unsigned char iSerialNumber;
     unsigned char bNumConfigurations;
-} USBDeviceDescriptor;
-
-union USBDeviceDescriptorUnion {
-    unsigned char device_descriptor_bytes[sizeof(USBDeviceDescriptor)];
-    USBDeviceDescriptor device_descriptor_u;
-};
+} __attribute__((__packed__)) USBDeviceDescriptor;
 
 // USB device classes
 #define DEVICE_CLASS_PER_INTERFACE                  0x00

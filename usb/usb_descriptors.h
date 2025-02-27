@@ -20,8 +20,4 @@ const USBDeviceDescriptor device_descriptor = {
     .bNumConfigurations = 1
 };
 
-union USBDeviceDescriptorUnion device_descriptor_union = {
-    .device_descriptor_u = device_descriptor
-};
-
 #endif
