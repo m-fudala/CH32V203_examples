@@ -81,6 +81,10 @@
 #define RB_UEP1_BUF_MOD                 (1 << 4)
 
 typedef struct USB {
+    volatile unsigned char device_address;
+
+    USBSetupRequest request;
+
     volatile unsigned char tx_bytes_to_send;
     volatile unsigned char *tx_pointer;
 } USB;
