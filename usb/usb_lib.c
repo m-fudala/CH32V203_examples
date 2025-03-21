@@ -16,6 +16,8 @@ int setup_counter = 0;
 int in_counter = 0;
 int out_counter = 0;
 
+int device_desc_adressed_address_set = 0;
+
 void usb_init(void) {
     // GPIO settings
     RCC->APB2PCENR |= RCC_IOPBEN;   // enable port B clock
@@ -139,6 +141,10 @@ void USBFS_IRQHandler(void) {
             asm("nop");
         }
 
+        if (addressed && address_set && device_desc_adressed_address_set) {
+            asm("nop");
+        }
+
         switch (current_token) {
             case UIS_TOKEN_OUT: {
                 // only ACK OUT packets for now
@@ -153,9 +159,12 @@ void USBFS_IRQHandler(void) {
                 if (in_counter > 0) {
                     asm("nop");
                 }
-                if (addressed && !address_set) {
-                    USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
 
+                if (addressed) {
+                    asm("nop");
+                }
+
+                if (addressed && !address_set) {
                     set_address(usb.device_address);
 
                     address_set++;
@@ -169,8 +178,6 @@ void USBFS_IRQHandler(void) {
             }
 
             case UIS_TOKEN_SETUP: {
-                USBFSD->UEP0_RX_CTRL |= RX_ANSWER_NAK;
-
                 usb.request.bmRequestType.transfer_direction = 
                         GET_USB_SETUP_REQUEST_TYPE_DIR(endpoint0_buffer[0]);
                 usb.request.bmRequestType.type = 
@@ -190,13 +197,25 @@ void USBFS_IRQHandler(void) {
                     case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
                         switch (usb.request.wValue) {
                             case DESC_TYPE_DEVICE: {
+                                if (addressed && address_set) {
+                                    device_desc_adressed_address_set++;
+                                }
+
                                 usb.tx_pointer = 
                                         (unsigned char *)&device_descriptor;
                                 usb.tx_bytes_to_send = 
                                         sizeof(device_descriptor);
 
+                                for (unsigned char byte = 0; byte < 18; byte++) {
+                                    *(endpoint0_buffer + byte) = *usb.tx_pointer;
+                            
+                                    usb.tx_pointer++;                           
+                                }
+
+                                USBFSD->UEP0_TX_LEN = 18;
+
                                 USBFSD->UEP0_TX_CTRL &= TX_D0_D1_READY_ACK_EXPECTED;
-                                USBFSD->UEP0_RX_CTRL ^= RB_UEP_R_TOG;
+                                USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
                                 
                                 break;
                             }
@@ -209,7 +228,9 @@ void USBFS_IRQHandler(void) {
                         // get received address
                         usb.device_address = usb.request.wValue >> 8;
 
-                        USBFSD->UEP0_RX_CTRL ^= RB_UEP_R_TOG;
+                        USBFSD->UEP0_TX_LEN = 0;
+                        USBFSD->UEP0_TX_CTRL &= TX_D0_D1_READY_ACK_EXPECTED;
+                        USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
 
                         addressed++;
 

@@ -1,4 +1,4 @@
-CC = riscv-none-elf-
+CC = riscv-wch-elf-
 CFLAGS = -c -march=rv32imac -mabi=ilp32 -ggdb -O0
 
 BUILD_DIR = build
@@ -17,7 +17,7 @@ clean:
 	del /S *.o *.elf
 
 $(BUILD_DIR)/main.o: main.c
-	if not exist $(BUILD_DIR) mkdir $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
 	$(CC)gcc main.c -o $(BUILD_DIR)/main.o $(CFLAGS)
 
 $(BUILD_DIR)/startup.o: $(STARTUP_NAME)
