@@ -15,6 +15,7 @@
 #define USB_LIB_H_
 
 #include "ch32v20x.h"
+#include "usb_hid_standards.h"
 #include "usb_standards.h"
 
 #define USBFS_DEFAULT_BUFFER_SIZE       64

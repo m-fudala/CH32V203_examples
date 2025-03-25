@@ -4,9 +4,9 @@
 // structure of USB setup packet
 typedef struct USBSetupRequest {
     struct {
-        unsigned char transfer_direction : 1;
-        unsigned char type : 2;
         unsigned char recipent : 5;
+        unsigned char type : 2;
+        unsigned char transfer_direction : 1;       
     } bmRequestType;
 
     unsigned char bRequest;
@@ -110,5 +110,101 @@ typedef struct USBDeviceDescriptor {
 #define DEVICE_PROTOCOL_NONE                        0x00
 #define DEVICE_PROTOCOL_IAD                         0x01
 #define DEVICE_PROTOCOL_VENDOR                      0xFF
+
+// structure of USB configuration descriptor
+typedef struct USBConfigurationDescriptor {
+    unsigned char bLength;
+    unsigned char bDescriptorType;
+    unsigned short wTotalLength;
+    unsigned char bNumInterfaces;
+    unsigned char bConfigurationValue;
+    unsigned char iConfiguration;
+
+    struct {
+        unsigned char reserved40: 5;
+        unsigned char remote_wakeup : 1;
+        unsigned char self_powered : 1;
+        unsigned char reserved7 : 1;
+    } bmAttributes;
+
+    unsigned char bMaxPower;    
+} __attribute__((__packed__)) USBConfigurationDescriptor;
+
+// USB configuration attributes
+#define CONFIGURATION_ATTRIBUTE_NO_REMOTE_WAKEUP    0x00
+#define CONFIGURATION_ATTRIBUTE_REMOTE_WAKEUP       0x01
+#define CONFIGURATION_ATTRIBUTE_BUS_POWERED         0x00
+#define CONFIGURATION_ATTRIBUTE_SELF_POWERED        0x01
+
+// USB configuration power consumptions
+#define CONFIGURATION_CURRENT_200mA                 100
+
+// structure of USB interface descriptor
+typedef struct USBInterfaceDescriptor {
+    unsigned char bLength;
+    unsigned char bDescriptorType;
+    unsigned char bInterfaceNumber;
+    unsigned char bAlternateSetting;
+    unsigned char bNumEndpoints;
+    unsigned char bInterfaceClass;
+    unsigned char bInterfaceSubClass;
+    unsigned char bInterfaceProtocol;
+    unsigned char iInterface;
+} __attribute__((__packed__)) USBInterfaceDescriptor;
+
+// structure of USB endpoint descriptor
+typedef struct USBEndpointDescriptor {
+    unsigned char bLength;
+    unsigned char bDescriptorType;
+
+    struct {
+        unsigned char endpoint_number : 4;
+        unsigned char reserved64 : 3;
+        unsigned char direction : 1;
+    } bEndpointAddress;
+
+    struct {
+        unsigned char transfer_type: 2;
+        unsigned char synchronization_type : 2;
+        unsigned char usage_type : 2;
+        unsigned char reserved76 : 2;
+    } bmAttributes;
+
+    struct {
+        unsigned short packet_size : 11;
+        unsigned short transaction_opportunities : 2;
+        unsigned short reserved1513 : 3;
+    } wMaxPacketSize;
+
+    unsigned char bInterval;
+} __attribute__((__packed__)) USBEndpointDescriptor;
+
+// USB endpoint addressess
+#define ENDPOINT_ADDRESS_OUT                        0x00
+#define ENDPOINT_ADDRESS_IN                         0x01
+
+// USB endpoint attributes
+#define ENDPOINT_ATTRIBUTES_CONTROL                 0x00
+#define ENDPOINT_ATTRIBUTES_ISOCHRONOUS             0x01
+#define ENDPOINT_ATTRIBUTES_BULK                    0x02
+#define ENDPOINT_ATTRIBUTES_INTERRUPT               0x03
+#define ENDPOINT_ATTRIBUTES_NO_SYNCHRONIZATION      0x00
+#define ENDPOINT_ATTRIBUTES_ASYNCHRONOUS            0x01
+#define ENDPOINT_ATTRIBUTES_ADAPTIVE                0x02
+#define ENDPOINT_ATTRIBUTES_SYNCHRONOUS             0x03
+#define ENDPOINT_ATTRIBUTES_DATA                    0x00
+#define ENDPOINT_ATTRIBUTES_FEEDBACK                0x01
+#define ENDPOINT_ATTRIBUTES_FEEDBACK_DATA           0x02
+
+// USB endpoint intervals
+#define ENDPOINT_INTERVALS_5ms                      5
+
+// structure of USB full configuration descriptor
+typedef struct USBFullConfigurationDescriptor {
+    USBConfigurationDescriptor configuration_descriptor;
+    USBInterfaceDescriptor interface_descriptor;
+    USBHIDDescriptor hid_descriptor;
+    USBEndpointDescriptor endpoint_descriptor;
+} __attribute__((__packed__)) USBFullConfigurationDescriptor;
 
 #endif
