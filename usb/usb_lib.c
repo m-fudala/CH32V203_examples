@@ -19,6 +19,9 @@ int out_counter = 0;
 int device_desc_adressed_address_set = 0;
 
 int configuration_counter = 0;
+int configured = 0;
+
+int not_implemented = 0;
 
 void usb_init(void) {
     // GPIO settings
@@ -159,8 +162,6 @@ void USBFS_IRQHandler(void) {
                         GET_USB_SETUP_REQUEST_TYPE_REC(endpoint0_buffer[0]);
 
                 usb.request.bRequest = endpoint0_buffer[1];
-                usb.request.wValue = (unsigned short)
-                        ((endpoint0_buffer[2] << 8) | endpoint0_buffer[3]);
                 usb.request.wIndex = (unsigned short)
                         ((endpoint0_buffer[4] << 8) | endpoint0_buffer[5]);
                 usb.request.wLength = (unsigned short)
@@ -168,6 +169,10 @@ void USBFS_IRQHandler(void) {
 
                 switch (usb.request.bRequest) {
                     case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
+                        usb.request.wValue = (unsigned short)
+                                ((endpoint0_buffer[2] << 8) |
+                                endpoint0_buffer[3]);
+
                         switch (usb.request.wValue) {
                             case DESC_TYPE_DEVICE: {
                                 usb.tx_pointer = 
@@ -193,8 +198,12 @@ void USBFS_IRQHandler(void) {
                     }
 
                     case SETUP_DEVICE_REQS_SET_ADDRESS: {
+                        usb.request.wValue = (unsigned short)
+                                ((endpoint0_buffer[3] << 8) |
+                                endpoint0_buffer[2]);
+
                         // save received address
-                        usb.device_address = usb.request.wValue >> 8;
+                        usb.device_address = usb.request.wValue;
 
                         usb.tx_bytes_to_send = 0;
 
@@ -202,11 +211,35 @@ void USBFS_IRQHandler(void) {
 
                         break;
                     }
+
+                    case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
+                        usb.request.wValue = (unsigned short)
+                                ((endpoint0_buffer[3] << 8) |
+                                endpoint0_buffer[2]);
+
+                        usb.tx_bytes_to_send = 0;
+
+                        configured++;
+
+                        break;
+                    }
+
+                    default: {
+                        not_implemented++;
+                    }
                 }
 
-                write_bytes_endpoint0();
-
                 USBFSD->UEP0_RX_CTRL &= RX_ANSWER_ACK;
+
+                if (not_implemented) {
+                    USBFSD->UEP0_TX_LEN = 0;
+                    USBFSD->UEP0_TX_CTRL |= TX_ANSWER_STALL;
+                    USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
+
+                    not_implemented = 0;
+                } else {
+                    write_bytes_endpoint0();
+                }
 
                 setup_counter++;
 

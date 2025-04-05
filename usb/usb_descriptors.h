@@ -20,25 +20,6 @@ const USBDeviceDescriptor device_descriptor = {
     .bNumConfigurations = 1
 };
 
-const USBConfigurationDescriptor configuration_descriptor = {
-    .bLength = sizeof(USBConfigurationDescriptor),
-    .bDescriptorType = DESC_TYPE_CONFIGURATION,
-    .wTotalLength = (sizeof(USBConfigurationDescriptor) +
-            sizeof(USBInterfaceDescriptor) + sizeof(USBEndpointDescriptor)),
-    .bNumInterfaces = 1,
-    .bConfigurationValue = 1,
-    .iConfiguration = 0,
-
-    .bmAttributes = {
-        .reserved40 = 0,
-        .remote_wakeup = CONFIGURATION_ATTRIBUTE_NO_REMOTE_WAKEUP,
-        .self_powered = CONFIGURATION_ATTRIBUTE_BUS_POWERED,
-        .reserved7 = 1
-    },
-
-    .bMaxPower = CONFIGURATION_CURRENT_200mA
-};
-
 const USBFullConfigurationDescriptor full_configuration_descriptor = {
     .configuration_descriptor = {
         .bLength = sizeof(USBConfigurationDescriptor),
@@ -80,7 +61,7 @@ const USBFullConfigurationDescriptor full_configuration_descriptor = {
         .bCountryCode = HID_COUNTRYCODE_NOT_SUPPORTED,
         .bNumDescriptors = 1,
         .bDescriptorType0 = DESC_TYPE_HID_REPORT,
-        .wDescriptorLength0 = 0
+        .wDescriptorLength0 = 52    // placeholder
     },
 
     .endpoint_descriptor = {
