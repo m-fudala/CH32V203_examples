@@ -167,65 +167,91 @@ void USBFS_IRQHandler(void) {
                 usb.request.wLength = (unsigned short)
                         ((endpoint0_buffer[7] << 8) | endpoint0_buffer[6]);
 
-                switch (usb.request.bRequest) {
-                    case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
-                        usb.request.wValue = (unsigned short)
-                                ((endpoint0_buffer[2] << 8) |
-                                endpoint0_buffer[3]);
+                switch (usb.request.bmRequestType.type) {
+                    case USB_SETUP_REQUEST_TYPE_TYPE_STANDARD: {
+                        switch (usb.request.bRequest) {
+                            case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
+                                usb.request.wValue = (unsigned short)
+                                        ((endpoint0_buffer[2] << 8) |
+                                        endpoint0_buffer[3]);
 
-                        switch (usb.request.wValue) {
-                            case DESC_TYPE_DEVICE: {
-                                usb.tx_pointer = 
-                                        (unsigned char *)&device_descriptor;
-                                usb.tx_bytes_to_send = 
-                                        sizeof(device_descriptor);
+                                switch (usb.request.wValue) {
+                                    case DESC_TYPE_DEVICE: {
+                                        usb.tx_pointer = 
+                                                (unsigned char *)
+                                                &device_descriptor;
+                                        usb.tx_bytes_to_send = 
+                                                sizeof(device_descriptor);
+                                        
+                                        break;
+                                    }
+
+                                    case DESC_TYPE_CONFIGURATION: {
+                                        usb.tx_pointer = (unsigned char *)
+                                                &full_configuration_descriptor;
+                                        usb.tx_bytes_to_send = 
+                                                usb.request.wLength;
+
+                                        configuration_counter++;
+
+                                        break;
+                                    }
+                                }
                                 
                                 break;
                             }
 
-                            case DESC_TYPE_CONFIGURATION: {
-                                usb.tx_pointer = (unsigned char *)
-                                        &full_configuration_descriptor;
-                                usb.tx_bytes_to_send = usb.request.wLength;
+                            case SETUP_DEVICE_REQS_SET_ADDRESS: {
+                                usb.request.wValue = (unsigned short)
+                                        ((endpoint0_buffer[3] << 8) |
+                                        endpoint0_buffer[2]);
 
-                                configuration_counter++;
+                                // save received address
+                                usb.device_address = usb.request.wValue;
+
+                                usb.tx_bytes_to_send = 0;
+
+                                addressed++;
+
+                                break;
+                            }
+
+                            case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
+                                usb.request.wValue = (unsigned short)
+                                        ((endpoint0_buffer[3] << 8) |
+                                        endpoint0_buffer[2]);
+
+                                usb.tx_bytes_to_send = 0;
+
+                                configured++;
+
+                                break;
+                            }
+
+                            default: {
+                                not_implemented++;
 
                                 break;
                             }
                         }
+
+                        break;
+                    }
+
+                    case USB_SETUP_REQUEST_TYPE_TYPE_CLASS: {
+                        switch (usb.request.bRequest) {
+                            case HID_REQS_SET_IDLE: {
+                                usb.tx_bytes_to_send = 0;
+                            }
                         
-                        break;
-                    }
+                            default: {
+                                not_implemented++;
 
-                    case SETUP_DEVICE_REQS_SET_ADDRESS: {
-                        usb.request.wValue = (unsigned short)
-                                ((endpoint0_buffer[3] << 8) |
-                                endpoint0_buffer[2]);
-
-                        // save received address
-                        usb.device_address = usb.request.wValue;
-
-                        usb.tx_bytes_to_send = 0;
-
-                        addressed++;
+                                break;
+                            }
+                        }
 
                         break;
-                    }
-
-                    case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
-                        usb.request.wValue = (unsigned short)
-                                ((endpoint0_buffer[3] << 8) |
-                                endpoint0_buffer[2]);
-
-                        usb.tx_bytes_to_send = 0;
-
-                        configured++;
-
-                        break;
-                    }
-
-                    default: {
-                        not_implemented++;
                     }
                 }
 
