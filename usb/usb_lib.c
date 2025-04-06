@@ -24,6 +24,8 @@ int configured = 0;
 
 int not_implemented = 0;
 
+int string_req = 0;
+
 void usb_init(void) {
     // GPIO settings
     RCC->APB2PCENR |= RCC_IOPBEN;   // enable port B clock
@@ -184,7 +186,7 @@ void USBFS_IRQHandler(void) {
                         endpoint1.tx_pointer = (unsigned char *)&hid_report;
                         endpoint1.tx_bytes_to_send = sizeof(hid_report);
 
-                        write_bytes_endpoint1();
+                        // write_bytes_endpoint1();
 
                         break;
                     }
@@ -250,6 +252,54 @@ void USBFS_IRQHandler(void) {
 
                                         break;
                                     }
+
+                                    // case DESC_TYPE_STRING: {
+                                    //     switch(usb.request.wIndex) {
+                                    //         case STRING_DESCRIPTOR0: {
+                                    //             usb.tx_pointer = 
+                                    //                 (unsigned char *)
+                                    //                 &string_descriptor0;
+                                    //             usb.tx_bytes_to_send = 
+                                    //                 string_descriptor0.bLength;
+
+                                    //                 string_req++;
+                                                
+                                    //             break;
+                                    //         }
+
+                                    //         case STRING_DESCRIPTOR_MANUFACTURER: {
+                                    //             usb.tx_pointer = 
+                                    //                 (unsigned char *)
+                                    //                 &string_descriptor_manufacturer;
+                                    //             usb.tx_bytes_to_send = 
+                                    //                 string_descriptor_manufacturer.bLength;
+                                                
+                                    //             break;
+                                    //         }
+
+                                    //         case STRING_DESCRIPTOR_PRODUCT: {
+                                    //             usb.tx_pointer = 
+                                    //                 (unsigned char *)
+                                    //                 &string_descriptor_product;
+                                    //             usb.tx_bytes_to_send = 
+                                    //                 string_descriptor_product.bLength;
+                                                
+                                    //             break;
+                                    //         }
+
+                                    //         case STRING_DESCRIPTOR_SERIAL_NUMBER: {
+                                    //             usb.tx_pointer = 
+                                    //                 (unsigned char *)
+                                    //                 &string_descriptor_serial_number;
+                                    //             usb.tx_bytes_to_send = 
+                                    //                 string_descriptor_serial_number.bLength;
+                                                
+                                    //             break;
+                                    //         }
+                                    //     }
+
+                                    //     break;
+                                    // }
                                 }
                                 
                                 break;

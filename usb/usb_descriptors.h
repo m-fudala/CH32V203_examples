@@ -121,4 +121,36 @@ const USBFullConfigurationDescriptor full_configuration_descriptor = {
     }
 };
 
+// enum holding indexes of string descriptors
+enum USBStringDescriptorIndex {
+    STRING_DESCRIPTOR0,
+    STRING_DESCRIPTOR_MANUFACTURER,
+    STRING_DESCRIPTOR_PRODUCT,
+    STRING_DESCRIPTOR_SERIAL_NUMBER
+};
+
+const USBStringDescriptor0 string_descriptor0 = {
+    .bLength = sizeof(USBStringDescriptor0),
+    .bDescriptorType = DESC_TYPE_STRING,
+    .wLANGID0 = STRING_LANGID_HID
+};
+
+const USBStringDescriptor string_descriptor_manufacturer = {
+    .bLength = 2 + 2 * 8,
+    .bDescriptorType = DESC_TYPE_STRING,
+    .bString = u"m-fudala"
+};
+
+const USBStringDescriptor string_descriptor_product = {
+    .bLength = 2 + 2 * 14,
+    .bDescriptorType = DESC_TYPE_STRING,
+    .bString = u"CH32V203 mouse"
+};
+
+const USBStringDescriptor string_descriptor_serial_number = {
+    .bLength = 2 + 2 * 1,
+    .bDescriptorType = DESC_TYPE_STRING,
+    .bString = u"1"
+};
+
 #endif

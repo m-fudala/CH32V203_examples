@@ -208,4 +208,20 @@ typedef struct USBFullConfigurationDescriptor {
     USBEndpointDescriptor endpoint_descriptor;
 } __attribute__((__packed__)) USBFullConfigurationDescriptor;
 
+// structure of USB string 0 descriptor
+typedef struct USBStringDescriptor0 {
+    unsigned char bLength;
+    unsigned char bDescriptorType;
+    unsigned short wLANGID0;
+} __attribute__((__packed__)) USBStringDescriptor0;
+
+#define STRING_LANGID_HID                           0x04FF
+
+// structure of USB string descriptors
+typedef struct USBStringDescriptor {
+    unsigned char bLength;
+    unsigned char bDescriptorType;
+    unsigned short bString[];
+} __attribute__((__packed__)) USBStringDescriptor;
+
 #endif
