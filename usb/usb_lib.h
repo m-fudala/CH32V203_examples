@@ -81,6 +81,11 @@
 #define RB_UEP1_TX_EN                   (1 << 6)
 #define RB_UEP1_BUF_MOD                 (1 << 4)
 
+enum USBEndpoints {
+    ENDPOINT0,
+    ENDPOINT1
+};
+
 typedef struct USB {
     volatile unsigned char device_address;
 
@@ -89,6 +94,11 @@ typedef struct USB {
     volatile unsigned char tx_bytes_to_send;
     volatile unsigned char *tx_pointer;
 } USB;
+
+typedef struct USBEndpoint1 {
+    volatile unsigned char tx_bytes_to_send;
+    volatile unsigned char *tx_pointer;
+} USBEndpoint1;
 
 void usb_init(void);
 

@@ -7,6 +7,7 @@ __attribute__((__aligned__(4))) unsigned char endpoint1_buffer
                                     [USBFS_DEFAULT_BUFFER_SIZE];
 
 USB usb;
+USBEndpoint1 endpoint1;
 
 int reset_counter = 0;
 int addressed = 0;
@@ -81,10 +82,10 @@ void configure_endpoint1(void) {
     USBFSD->UEP1_DMA = (int)endpoint1_buffer;
 
     // enable IN endpoint
-    USBFSD->UEP4_1_MOD |= RB_UEP1_TX_EN;
+    USBFSD->UEP4_1_MOD = RB_UEP1_TX_EN;
 
-    USBFSD->UEP1_TX_CTRL |= RB_UEP_T_AUTO_TOG | TX_D0_D1_READY_ACK_EXPECTED;
-    USBFSD->UEP1_RX_CTRL |= RB_UEP_R_AUTO_TOG | RX_ANSWER_ACK;
+    USBFSD->UEP1_TX_CTRL = 0;
+    USBFSD->UEP1_RX_CTRL = 0;
 }
 
 void write_bytes_endpoint0(void) {
@@ -109,15 +110,37 @@ void write_bytes_endpoint0(void) {
     USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
 }
 
+void write_bytes_endpoint1(void) {
+    unsigned char packet_length;
+
+    if (endpoint1.tx_bytes_to_send > USBFS_DEFAULT_BUFFER_SIZE) {
+        packet_length = USBFS_DEFAULT_BUFFER_SIZE;
+    } else {
+        packet_length = endpoint1.tx_bytes_to_send;
+    }
+
+    for (unsigned char byte = 0; byte < packet_length; byte++) {
+        *(endpoint1_buffer + byte) = *endpoint1.tx_pointer;
+
+        endpoint1.tx_pointer++;                           
+    }
+
+    USBFSD->UEP1_TX_LEN = packet_length;
+    endpoint1.tx_bytes_to_send -= packet_length;
+
+    USBFSD->UEP1_TX_CTRL &= TX_D0_D1_READY_ACK_EXPECTED;
+    USBFSD->UEP1_TX_CTRL ^= RB_UEP_T_TOG;
+}
+
 void USBFS_IRQHandler(void) {
     volatile int usb_interrupt_flags = USBFSD->INT_FG;  // read the status
     volatile int usb_interrupt_status = USBFSD->INT_ST;
 
     if (usb_interrupt_flags & RB_UIF_BUS_RST) {        
         // TODO: deconfigure more endpoints
-        // deconfigure_endpoint1();   
+        deconfigure_endpoint1();  
         configure_endpoint0();
-        // configure_endpoint1();
+        configure_endpoint1();
 
         set_address(USBFS_DEFAULT_ADDRESS);
 
@@ -140,10 +163,31 @@ void USBFS_IRQHandler(void) {
             }
 
             case UIS_TOKEN_IN: {
-                if (addressed && !address_set) {
-                    set_address(usb.device_address);
+                switch (current_endpoint) {
+                    case ENDPOINT0: {
+                        if (addressed && !address_set) {
+                            set_address(usb.device_address);
 
-                    address_set++;
+                            address_set++;
+                        }
+
+                        break;
+                    }
+
+                    case ENDPOINT1: {
+                        USBHIDReport hid_report = {
+                            .x = 10,
+                            .y = 0,
+                            .buttons = 0
+                        };
+
+                        endpoint1.tx_pointer = (unsigned char *)&hid_report;
+                        endpoint1.tx_bytes_to_send = sizeof(hid_report);
+
+                        write_bytes_endpoint1();
+
+                        break;
+                    }
                 }
 
                 in_counter++;

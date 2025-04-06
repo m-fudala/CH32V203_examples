@@ -33,4 +33,11 @@ typedef struct USBHIDDescriptor {
 #define HID_REQS_SET_IDLE	                        0x0A
 #define HID_REQS_SET_PROTOCOL	                    0x0B
 
+// structure of HID report
+typedef struct USBHIDReport {
+    char x;
+    char y;
+    unsigned char buttons;
+} __attribute__((__packed__)) USBHIDReport;
+
 #endif
