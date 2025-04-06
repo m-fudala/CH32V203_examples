@@ -2,6 +2,7 @@
 #define USB_DESCRIPTORS_H_
 
 #include "usb_standards.h"
+#include "usb_hid_standards.h"
 
 const USBDeviceDescriptor device_descriptor = {
     .bLength = sizeof(USBDeviceDescriptor),
@@ -18,6 +19,35 @@ const USBDeviceDescriptor device_descriptor = {
     .iProduct = 0,
     .iSerialNumber = 0,
     .bNumConfigurations = 1
+};
+
+const unsigned char hid_report_descriptor[] = {
+	HID_USAGE_PAGE(HID_PAGE_DESKTOP),
+	HID_USAGE(HID_DESKTOP_MOUSE),
+	HID_COLLECTION(HID_APPLICATION_COLLECTION),
+		HID_USAGE(HID_DESKTOP_POINTER),
+		HID_COLLECTION(HID_PHYSICAL_COLLECTION),
+			HID_USAGE(HID_DESKTOP_X),
+			HID_USAGE(HID_DESKTOP_Y),
+			HID_LOGICAL_MINIMUM(-127),
+			HID_LOGICAL_MAXIMUM(127),
+			HID_REPORT_SIZE(8),
+			HID_REPORT_COUNT(2),
+			HID_INPUT(HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_RELATIVE),
+
+			HID_USAGE_PAGE(HID_PAGE_BUTTON),
+			HID_USAGE_MINIMUM(1),
+			HID_USAGE_MAXIMUM(3),
+			HID_LOGICAL_MINIMUM(0),
+			HID_LOGICAL_MAXIMUM(1),
+			HID_REPORT_SIZE(1),
+			HID_REPORT_COUNT(3),
+			HID_INPUT(HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+			HID_REPORT_SIZE(1),
+			HID_REPORT_COUNT(5),
+			HID_INPUT(HID_IOF_CONSTANT),
+		HID_END_COLLECTION,
+	HID_END_COLLECTION
 };
 
 const USBFullConfigurationDescriptor full_configuration_descriptor = {
@@ -61,7 +91,7 @@ const USBFullConfigurationDescriptor full_configuration_descriptor = {
         .bCountryCode = HID_COUNTRYCODE_NOT_SUPPORTED,
         .bNumDescriptors = 1,
         .bDescriptorType0 = DESC_TYPE_HID_REPORT,
-        .wDescriptorLength0 = 52    // placeholder
+        .wDescriptorLength0 = sizeof(hid_report_descriptor)
     },
 
     .endpoint_descriptor = {

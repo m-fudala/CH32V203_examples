@@ -196,6 +196,16 @@ void USBFS_IRQHandler(void) {
 
                                         break;
                                     }
+
+                                    case DESC_TYPE_HID_REPORT: {
+                                        usb.tx_pointer = 
+                                                (unsigned char *)
+                                                &hid_report_descriptor;
+                                        usb.tx_bytes_to_send = 
+                                                sizeof(hid_report_descriptor);
+
+                                        break;
+                                    }
                                 }
                                 
                                 break;

@@ -1,6 +1,10 @@
 #ifndef USB_HID_STANDARDS_H_
 #define USB_HID_STANDARDS_H_
 
+#include "usb_hid.h"
+#include "usb_hid_usage_desktop.h"
+#include "usb_hid_usage_button.h"
+
 #define DESC_TYPE_HID                               0x21
 #define DESC_TYPE_HID_REPORT                        0x22
 
