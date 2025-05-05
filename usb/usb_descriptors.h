@@ -122,12 +122,12 @@ const USBFullConfigurationDescriptor full_configuration_descriptor = {
 };
 
 // enum holding indexes of string descriptors
-enum USBStringDescriptorIndex {
+typedef enum USBStringDescriptorIndex {
     STRING_DESCRIPTOR0,
     STRING_DESCRIPTOR_MANUFACTURER,
     STRING_DESCRIPTOR_PRODUCT,
     STRING_DESCRIPTOR_SERIAL_NUMBER
-};
+} USBStringDescriptorIndex;
 
 const USBStringDescriptor0 string_descriptor0 = {
     .bLength = sizeof(USBStringDescriptor0),

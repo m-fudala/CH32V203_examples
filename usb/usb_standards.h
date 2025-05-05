@@ -1,6 +1,15 @@
 #ifndef USB_STANDARDS_H_
 #define USB_STANDARDS_H_
 
+// device states defined in USB
+typedef enum
+{
+	USB_DEVICE_STATE_DEFAULT,
+	USB_DEVICE_STATE_ADDRESSED,
+	USB_DEVICE_STATE_CONFIGURED,
+	USB_DEVICE_STATE_SUSPENDED
+} USBDeviceState;
+
 // structure of USB setup packet
 typedef struct USBSetupRequest {
     struct {

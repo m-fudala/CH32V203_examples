@@ -81,13 +81,21 @@
 #define RB_UEP1_TX_EN                   (1 << 6)
 #define RB_UEP1_BUF_MOD                 (1 << 4)
 
-enum USBEndpoints {
+typedef enum USBEndpoints {
     ENDPOINT0,
     ENDPOINT1
-};
+} USBEndpoints;
+
+typedef enum USBErrors {
+    NO_ERROR,
+    REQ_NOT_IMPLEMENTED
+} USBErrors;
 
 typedef struct USB {
     volatile unsigned char device_address;
+
+    volatile unsigned char device_error;
+    volatile unsigned char device_state;
 
     USBSetupRequest request;
 
@@ -109,6 +117,7 @@ void deconfigure_endpoint1(void);
 void configure_endpoint1(void);
 
 void write_bytes_endpoint0(void);
+void write_bytes_endpoint1(void);
 
 void USBFS_IRQHandler(void) __attribute__((interrupt()));
 

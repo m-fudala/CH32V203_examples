@@ -9,23 +9,6 @@ __attribute__((__aligned__(4))) unsigned char endpoint1_buffer
 USB usb;
 USBEndpoint1 endpoint1;
 
-int reset_counter = 0;
-int addressed = 0;
-int address_set = 0;
-
-int setup_counter = 0;
-int in_counter = 0;
-int out_counter = 0;
-
-int device_desc_adressed_address_set = 0;
-
-int configuration_counter = 0;
-int configured = 0;
-
-int not_implemented = 0;
-
-int string_req = 0;
-
 void usb_init(void) {
     // GPIO settings
     RCC->APB2PCENR |= RCC_IOPBEN;   // enable port B clock
@@ -146,7 +129,7 @@ void USBFS_IRQHandler(void) {
 
         set_address(USBFS_DEFAULT_ADDRESS);
 
-        reset_counter++;
+        usb.device_state = USB_DEVICE_STATE_DEFAULT;
 
         USBFSD->INT_FG |= RB_UIF_BUS_RST;   // clear interrupt
     } else if (usb_interrupt_flags & RB_UIF_TRANSFER) {
@@ -159,18 +142,14 @@ void USBFS_IRQHandler(void) {
                 // only ACK OUT packets for now
                 USBFSD->UEP0_RX_CTRL ^= RB_UEP_R_TOG;
 
-                out_counter++;
-
                 break;
             }
 
             case UIS_TOKEN_IN: {
                 switch (current_endpoint) {
                     case ENDPOINT0: {
-                        if (addressed && !address_set) {
+                        if (usb.device_state == USB_DEVICE_STATE_DEFAULT) {
                             set_address(usb.device_address);
-
-                            address_set++;
                         }
 
                         break;
@@ -191,8 +170,6 @@ void USBFS_IRQHandler(void) {
                         break;
                     }
                 }
-
-                in_counter++;
 
                 break;
             }
@@ -237,8 +214,6 @@ void USBFS_IRQHandler(void) {
                                                 &full_configuration_descriptor;
                                         usb.tx_bytes_to_send = 
                                                 usb.request.wLength;
-
-                                        configuration_counter++;
 
                                         break;
                                     }
@@ -315,7 +290,7 @@ void USBFS_IRQHandler(void) {
 
                                 usb.tx_bytes_to_send = 0;
 
-                                addressed++;
+                                usb.device_state = USB_DEVICE_STATE_ADDRESSED;
 
                                 break;
                             }
@@ -327,13 +302,13 @@ void USBFS_IRQHandler(void) {
 
                                 usb.tx_bytes_to_send = 0;
 
-                                configured++;
+                                usb.device_state = USB_DEVICE_STATE_CONFIGURED;
 
                                 break;
                             }
 
                             default: {
-                                not_implemented++;
+                                usb.device_error = REQ_NOT_IMPLEMENTED;
 
                                 break;
                             }
@@ -349,7 +324,7 @@ void USBFS_IRQHandler(void) {
                             }
                         
                             default: {
-                                not_implemented++;
+                                usb.device_error = REQ_NOT_IMPLEMENTED;
 
                                 break;
                             }
@@ -361,17 +336,15 @@ void USBFS_IRQHandler(void) {
 
                 USBFSD->UEP0_RX_CTRL &= RX_ANSWER_ACK;
 
-                if (not_implemented) {
+                if (usb.device_error) {
                     USBFSD->UEP0_TX_LEN = 0;
                     USBFSD->UEP0_TX_CTRL |= TX_ANSWER_STALL;
                     USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
 
-                    not_implemented = 0;
+                    usb.device_error = NO_ERROR;
                 } else {
                     write_bytes_endpoint0();
                 }
-
-                setup_counter++;
 
                 break;
             }
