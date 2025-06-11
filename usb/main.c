@@ -7,6 +7,7 @@
 #include "usb_lib.h"
 
 void clock_init(void);
+void HardFault_Handler(void) __attribute__((interrupt()));
 
 int main(void) {
     clock_init();
@@ -37,3 +38,8 @@ void clock_init(void) {
 
     while (!(RCC->CFGR0 & RCC_SWS_PLL));   // check if PLL is the source
 }
+
+void HardFault_Handler(void) {
+    asm("nop");
+}
+

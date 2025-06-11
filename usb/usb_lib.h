@@ -21,6 +21,8 @@
 #define USB_DEFAULT_BUFFER_SIZE         64
 #define USB_DEFAULT_ADDRESS             0
 
+#define USBD_BTABLE_OFFSET              8
+
 #define REG                         *(volatile uint32_t*)
 #define BIT                         (uint32_t)
 
@@ -31,6 +33,7 @@
 #define USBD_FNR                    REG (USBD_BASE + 0x48)
 #define USBD_DADDR                  REG (USBD_BASE + 0x4C)
 #define USBD_BTABLE                 REG (USBD_BASE + 0x50)
+#define SRAM_START                  (uint32_t)0x40006000
 
 // USBD_CNTR fields
 #define USBD_CTRM                   BIT 0x8000
@@ -47,6 +50,10 @@
 #define USBD_ADD_MASK               BIT 0x7F
 
 #define USBD_EPR(X)                 REG (USBD_BASE + (X) * 0x4)
+#define USBD_EPR0                   REG (USBD_BASE + 0x0)
+
+#define USBD_ADDR_RX(X)             REG(SRAM_START + USBD_BTABLE_OFFSET \
+                                        + (X) * 0xF + 0x8)
 
 // USBD_EPR fields
 #define USBD_STAT_RX_DISABLED       BIT 0x0 << 12

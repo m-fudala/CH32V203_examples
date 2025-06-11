@@ -1,9 +1,7 @@
 #include "usb_lib.h"
 #include "usb_descriptors.h"
 
-__attribute__((__aligned__(4))) unsigned char endpoint0_buffer
-                                    [USB_DEFAULT_BUFFER_SIZE];
-__attribute__((__aligned__(4))) unsigned char endpoint1_buffer
+__attribute__((__aligned__(2))) unsigned char endpoint0_rx_buffer
                                     [USB_DEFAULT_BUFFER_SIZE];
 
 USB usb;
@@ -20,13 +18,10 @@ void usb_init(void) {
 
     RCC->APB1PCENR |= RCC_USBEN;     // enable USBD clock
 
-    // initialize packet buffer description table
-    USBD_BTABLE = 0;
-
     USBD_CNTR &= ~USBD_PDWN;
-
-    // configure endpoint 0
-    USBD_EPR(0) = USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL | USBD_STAT_TX_ACK;
+    
+    // initialize packet buffer description table
+    USBD_BTABLE = USBD_BTABLE_OFFSET;
 
     // set default USB address
     set_address(USB_DEFAULT_ADDRESS);
@@ -57,12 +52,10 @@ void set_address(unsigned char address) {
     }
 }
 
-// void configure_endpoint0(void) {
-//     USBFSD->UEP0_DMA = (int)endpoint0_buffer;
-
-//     USBFSD->UEP0_TX_CTRL = TX_ANSWER_NAK;
-//     USBFSD->UEP0_RX_CTRL = 0;
-// }
+void configure_endpoint0(void) {
+    USBD_ADDR_RX(0) = (int)endpoint0_rx_buffer;
+    USBD_EPR(0) = USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL | USBD_STAT_TX_ACK;
+}
 
 // void deconfigure_endpoint1(void) {
 //     USBFSD->UEP4_1_MOD = 0;
@@ -128,18 +121,20 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
     // read interrupt flags
     volatile unsigned int usb_interrupt_flags = USBD_ISTR;
 
-    if (usb_interrupt_flags & USBD_CTR) {
+    if (usb_interrupt_flags & USBD_RESET) {
+        USBD_CNTR &= ~USBD_FRES;    // has to be done twice for endpoint to get
+                                    // configured
         // // TODO: deconfigure more endpoints
         // deconfigure_endpoint1();  
-        // configure_endpoint0();
+        configure_endpoint0();
         // configure_endpoint1();
 
-        // set_address(USBFS_DEFAULT_ADDRESS);
+        set_address(USB_DEFAULT_ADDRESS);
 
-        // usb.device_state = USB_DEVICE_STATE_DEFAULT;
+        usb.device_state = USB_DEVICE_STATE_DEFAULT;
 
-        USBD_ISTR &= ~USBD_CTR;     // clear interrupt
-    } else if (usb_interrupt_flags & USBD_RESET) {
+        USBD_ISTR &= ~USBD_RESET;     // clear interrupt
+    } else if (usb_interrupt_flags & USBD_CTR) {
         // int current_token = (usb_interrupt_status & MASK_UIS_TOKEN) >> 4;
         // int current_endpoint = usb_interrupt_status & MASK_UIS_ENDP;
         // int no_of_bytes = USBFSD->RX_LEN;
@@ -357,6 +352,6 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
         //     }
         // }
 
-        USBD_ISTR &= ~USBD_RESET;   // clear interrupt
+        USBD_ISTR &= ~USBD_CTR;   // clear interrupt
     }
 }
