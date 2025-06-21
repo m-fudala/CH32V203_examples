@@ -21,7 +21,7 @@
 #define USB_DEFAULT_BUFFER_SIZE         64
 #define USB_DEFAULT_ADDRESS             0
 
-#define USBD_BTABLE_OFFSET              8
+#define USBD_BTABLE_OFFSET              0
 
 #define REG                         *(volatile uint32_t*)
 #define BIT                         (uint32_t)
@@ -50,10 +50,15 @@
 #define USBD_ADD_MASK               BIT 0x7F
 
 #define USBD_EPR(X)                 REG (USBD_BASE + (X) * 0x4)
-#define USBD_EPR0                   REG (USBD_BASE + 0x0)
 
+#define USBD_ADDR_TX(X)             REG(SRAM_START + USBD_BTABLE_OFFSET \
+                                        + (X) * 0xF)
+#define USBD_COUNT_TX(X)            REG(SRAM_START + USBD_BTABLE_OFFSET \
+                                        + (X) * 0xF + 0x4)
 #define USBD_ADDR_RX(X)             REG(SRAM_START + USBD_BTABLE_OFFSET \
                                         + (X) * 0xF + 0x8)
+#define USBD_COUNT_RX(X)            REG(SRAM_START + USBD_BTABLE_OFFSET \
+                                        + (X) * 0xF + 0xC)
 
 // USBD_EPR fields
 #define USBD_STAT_RX_DISABLED       BIT 0x0 << 12
@@ -70,6 +75,10 @@
 #define USBD_STAT_TX_STALL          BIT 0x1 << 4
 #define USBD_STAT_TX_NAK            BIT 0x2 << 4
 #define USBD_STAT_TX_ACK            BIT 0x3 << 4
+
+// USBD_COUNT_RX fields
+#define USBD_BLSIZE                 BIT 0x8000
+#define USBD_NUMBLOCK_64            USBD_BLSIZE | ((BIT 0x1) << 10)
 
 typedef enum USBEndpoints {
     ENDPOINT0,

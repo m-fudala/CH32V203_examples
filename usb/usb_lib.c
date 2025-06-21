@@ -1,46 +1,35 @@
 #include "usb_lib.h"
 #include "usb_descriptors.h"
 
-__attribute__((__aligned__(2))) unsigned char endpoint0_rx_buffer
-                                    [USB_DEFAULT_BUFFER_SIZE];
-
 USB usb;
 USBEndpoint1 endpoint1;
 
 void usb_init(void) {
     // GPIO settings
     RCC->APB2PCENR |= RCC_IOPAEN;   // enable port A clock
-    // DP - PA12, DM - PA10 -> output low level in push-pull mode before
+    // DP - PA12, DM - PA11 -> output low level in push-pull mode before
     // initialization
-    GPIOA->CFGHR = GPIO_CFGHR_MODE12_1 | GPIO_CFGHR_MODE12_0 |
-            GPIO_CFGHR_MODE10_1 | GPIO_CFGHR_MODE10_0;
     GPIOA->OUTDR = 0;
+    GPIOA->CFGHR = GPIO_CFGHR_MODE12_1 | GPIO_CFGHR_MODE12_0 |
+            GPIO_CFGHR_MODE11_1 | GPIO_CFGHR_MODE11_0;
 
     RCC->APB1PCENR |= RCC_USBEN;     // enable USBD clock
 
+    // power up peripherial
     USBD_CNTR &= ~USBD_PDWN;
-    
-    // initialize packet buffer description table
-    USBD_BTABLE = USBD_BTABLE_OFFSET;
-
-    // set default USB address
-    set_address(USB_DEFAULT_ADDRESS);
 
     // enable internal pull-up and set the speed
     EXTEN->EXTEN_CTR |= EXTEN_USBD_PU_EN;
 
-    // enable endpoint transfer
-    USBD_DADDR |= USBD_EF;
-
     // clear interrupt flags
     USBD_ISTR = 0;
+
+    // clear reset bit
+    USBD_CNTR &= ~USBD_FRES;
 
     // enable interrupts
     PFIC->IENR[1] |= (3 << 3);  // enable USB HP/LP (35,36)
     USBD_CNTR |= USBD_CTRM | USBD_RESETM;
-
-    // clear reset bit
-    USBD_CNTR &= ~USBD_FRES;
 }
 
 void set_address(unsigned char address) {
@@ -53,83 +42,26 @@ void set_address(unsigned char address) {
 }
 
 void configure_endpoint0(void) {
-    USBD_ADDR_RX(0) = (int)endpoint0_rx_buffer;
-    USBD_EPR(0) = USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL | USBD_STAT_TX_ACK;
+    USBD_COUNT_RX(0) = USBD_NUMBLOCK_64;
+    USBD_ADDR_RX(0) = 0x00C0;
+    USBD_ADDR_TX(0) = 0x0080;
+    USBD_EPR(0) = USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL | USBD_STAT_TX_NAK;
 }
-
-// void deconfigure_endpoint1(void) {
-//     USBFSD->UEP4_1_MOD = 0;
-//     USBFSD->UEP1_TX_CTRL = 0;
-//     USBFSD->UEP1_RX_CTRL = 0;
-// }
-
-// void configure_endpoint1(void) {
-//     USBFSD->UEP1_DMA = (int)endpoint1_buffer;
-
-//     // enable IN endpoint
-//     USBFSD->UEP4_1_MOD = RB_UEP1_TX_EN;
-
-//     USBFSD->UEP1_TX_CTRL = 0;
-//     USBFSD->UEP1_RX_CTRL = 0;
-// }
-
-// void write_bytes_endpoint0(void) {
-//     unsigned char packet_length;
-
-//     if (usb.tx_bytes_to_send > USBFS_DEFAULT_BUFFER_SIZE) {
-//         packet_length = USBFS_DEFAULT_BUFFER_SIZE;
-//     } else {
-//         packet_length = usb.tx_bytes_to_send;
-//     }
-
-//     for (unsigned char byte = 0; byte < packet_length; byte++) {
-//         *(endpoint0_buffer + byte) = *usb.tx_pointer;
-
-//         usb.tx_pointer++;                           
-//     }
-
-//     USBFSD->UEP0_TX_LEN = packet_length;
-//     usb.tx_bytes_to_send -= packet_length;
-
-//     USBFSD->UEP0_TX_CTRL &= TX_D0_D1_READY_ACK_EXPECTED;
-//     USBFSD->UEP0_TX_CTRL ^= RB_UEP_T_TOG;
-// }
-
-// void write_bytes_endpoint1(void) {
-//     unsigned char packet_length;
-
-//     if (endpoint1.tx_bytes_to_send > USBFS_DEFAULT_BUFFER_SIZE) {
-//         packet_length = USBFS_DEFAULT_BUFFER_SIZE;
-//     } else {
-//         packet_length = endpoint1.tx_bytes_to_send;
-//     }
-
-//     for (unsigned char byte = 0; byte < packet_length; byte++) {
-//         *(endpoint1_buffer + byte) = *endpoint1.tx_pointer;
-
-//         endpoint1.tx_pointer++;                           
-//     }
-
-//     USBFSD->UEP1_TX_LEN = packet_length;
-//     endpoint1.tx_bytes_to_send -= packet_length;
-
-//     USBFSD->UEP1_TX_CTRL &= TX_D0_D1_READY_ACK_EXPECTED;
-//     USBFSD->UEP1_TX_CTRL ^= RB_UEP_T_TOG;
-// }
 
 void USB_LP_CAN1_RX0_IRQHandler(void) {
     // read interrupt flags
     volatile unsigned int usb_interrupt_flags = USBD_ISTR;
 
     if (usb_interrupt_flags & USBD_RESET) {
-        USBD_CNTR &= ~USBD_FRES;    // has to be done twice for endpoint to get
-                                    // configured
-        // // TODO: deconfigure more endpoints
-        // deconfigure_endpoint1();  
+        // initialize packet buffer description table
+        USBD_BTABLE = USBD_BTABLE_OFFSET;
+
         configure_endpoint0();
-        // configure_endpoint1();
 
         set_address(USB_DEFAULT_ADDRESS);
+
+        // enable endpoint transfer
+        USBD_DADDR |= USBD_EF;
 
         usb.device_state = USB_DEVICE_STATE_DEFAULT;
 
