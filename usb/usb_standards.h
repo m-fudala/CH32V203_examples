@@ -1,6 +1,15 @@
 #ifndef USB_STANDARDS_H_
 #define USB_STANDARDS_H_
 
+// USB tokens
+typedef enum
+{
+	USB_TOKEN_OUT = 0x1,
+	USB_TOKEN_IN = 0x9,
+	USB_TOKEN_SOF = 0x5,
+	USB_TOKEN_SETUP = 0xD
+} USBTokens;
+
 // device states defined in USB
 typedef enum
 {

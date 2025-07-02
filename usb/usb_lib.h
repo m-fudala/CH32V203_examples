@@ -35,6 +35,16 @@
 #define USBD_BTABLE                 REG (USBD_BASE + 0x50)
 #define SRAM_START                  (uint32_t)0x40006000
 
+#define USBD_BUFF_TX_OFFSET(X)      0x20 + (X) * 0x20
+#define USBD_BUFF_RX_OFFSET(X)      0x20 + 0x40 + (X) * 0x20
+#define USBD_BUFF_TX(X)             REG (SRAM_START + USBD_BUFF_TX_OFFSET(X))
+#define USBD_BUFF_RX(X)             REG (SRAM_START + USBD_BUFF_RX_OFFSET(X))
+
+#define USBD_BUFF_TX_BYTE(X, Y)     REG (SRAM_START + (USBD_BUFF_TX_OFFSET(X) \
+                                            + (Y)) * 2)
+#define USBD_BUFF_RX_BYTE(X, Y)     REG (SRAM_START + (USBD_BUFF_RX_OFFSET(X) \
+                                            + (Y)) * 2)
+
 // USBD_CNTR fields
 #define USBD_CTRM                   BIT 0x8000
 #define USBD_RESETM                 BIT 0x400
@@ -44,6 +54,7 @@
 // USBD_ISTR fields
 #define USBD_CTR                    BIT 0x8000
 #define USBD_RESET                  BIT 0x400
+#define USBD_EP_ID_MASK             BIT 0xF
 
 // USBD_DADDR fields
 #define USBD_EF                     BIT 0x80
@@ -61,15 +72,24 @@
                                         + (X) * 0xF + 0xC)
 
 // USBD_EPR fields
+#define USBD_CTR_RX                 BIT 0x8000
+
 #define USBD_STAT_RX_DISABLED       BIT 0x0 << 12
 #define USBD_STAT_RX_STALL          BIT 0x1 << 12
 #define USBD_STAT_RX_NAK            BIT 0x2 << 12
 #define USBD_STAT_RX_ACK            BIT 0x3 << 12
 
+#define USBD_STAT_RX_BIT1           BIT 0x2000
+#define USBD_STAT_RX_BIT0           BIT 0x1000
+
 #define USBD_EPTYPE_BULK            BIT 0x0 << 9
 #define USBD_EPTYPE_CONTROL         BIT 0x1 << 9
 #define USBD_EPTYPE_ISO             BIT 0x2 << 9
 #define USBD_EPTYPE_INTERRUPT       BIT 0x3 << 9
+
+#define USBD_SETUP                  BIT 0x800
+
+#define USBD_CTR_TX                 BIT 0x80
 
 #define USBD_STAT_TX_DISABLED       BIT 0x0 << 4
 #define USBD_STAT_TX_STALL          BIT 0x1 << 4
@@ -79,6 +99,7 @@
 // USBD_COUNT_RX fields
 #define USBD_BLSIZE                 BIT 0x8000
 #define USBD_NUMBLOCK_64            USBD_BLSIZE | ((BIT 0x1) << 10)
+#define USBD_COUNT_RX_MASK          BIT 0x3FF
 
 typedef enum USBEndpoints {
     ENDPOINT0,
@@ -111,12 +132,10 @@ void usb_init(void);
 
 void set_address(unsigned char address);
 
-void configure_endpoint0(void);
-void deconfigure_endpoint1(void);
-void configure_endpoint1(void);
+void configure_endpoint_control(unsigned char endpoint);
 
-void write_bytes_endpoint0(void);
-void write_bytes_endpoint1(void);
+void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer,
+        unsigned char length);
 
 void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((interrupt()));
 
