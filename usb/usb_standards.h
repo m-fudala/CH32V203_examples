@@ -19,6 +19,17 @@ typedef enum
 	USB_DEVICE_STATE_SUSPENDED
 } USBDeviceState;
 
+typedef enum
+{
+	USB_CONTROL_STAGE_SETUP,
+	USB_CONTROL_STAGE_DATA_OUT,
+	USB_CONTROL_STAGE_DATA_IN,
+	USB_CONTROL_STAGE_DATA_IN_IDLE,
+	USB_CONTROL_STAGE_DATA_IN_ZERO,
+	USB_CONTROL_STAGE_STATUS_OUT,
+	USB_CONTROL_STAGE_STATUS_IN
+} UsbControlStages;
+
 // structure of USB setup packet
 typedef struct USBSetupRequest {
     struct {

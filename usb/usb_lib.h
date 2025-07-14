@@ -35,8 +35,8 @@
 #define USBD_BTABLE                 REG (USBD_BASE + 0x50)
 #define SRAM_START                  (uint32_t)0x40006000
 
-#define USBD_BUFF_TX_OFFSET(X)      0x20 + (X) * 0x20
-#define USBD_BUFF_RX_OFFSET(X)      0x20 + 0x40 + (X) * 0x20
+#define USBD_BUFF_TX_OFFSET(X)      0x40 + (X) * 0x40
+#define USBD_BUFF_RX_OFFSET(X)      0x40 + 0x40 + (X) * 0x40
 #define USBD_BUFF_TX(X)             REG (SRAM_START + USBD_BUFF_TX_OFFSET(X))
 #define USBD_BUFF_RX(X)             REG (SRAM_START + USBD_BUFF_RX_OFFSET(X))
 
@@ -44,6 +44,8 @@
                                             + (Y)) * 2)
 #define USBD_BUFF_RX_BYTE(X, Y)     REG (SRAM_START + (USBD_BUFF_RX_OFFSET(X) \
                                             + (Y)) * 2)
+
+#define SRAM_BYTE(Y)                REG (SRAM_START + (Y))
 
 // USBD_CNTR fields
 #define USBD_CTRM                   BIT 0x8000
@@ -96,6 +98,9 @@
 #define USBD_STAT_TX_NAK            BIT 0x2 << 4
 #define USBD_STAT_TX_ACK            BIT 0x3 << 4
 
+#define USBD_STAT_TX_BIT1           BIT 0x20
+#define USBD_STAT_TX_BIT0           BIT 0x10
+
 // USBD_COUNT_RX fields
 #define USBD_BLSIZE                 BIT 0x8000
 #define USBD_NUMBLOCK_64            USBD_BLSIZE | ((BIT 0x1) << 10)
@@ -117,6 +122,8 @@ typedef struct USB {
     volatile unsigned char device_error;
     volatile unsigned char device_state;
 
+    volatile unsigned char control_stage;
+
     USBSetupRequest request;
 
     volatile unsigned char tx_bytes_to_send;
@@ -134,8 +141,10 @@ void set_address(unsigned char address);
 
 void configure_endpoint_control(unsigned char endpoint);
 
+void clear_sram(void);
 void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer,
         unsigned char length);
+void copy_buffer_to_tx(unsigned char endpoint);
 
 void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((interrupt()));
 

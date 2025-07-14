@@ -32,6 +32,8 @@ void usb_init(void) {
     // enable interrupts
     PFIC->IENR[1] |= (3 << 3);  // enable USB HP/LP (35,36)
     USBD_CNTR |= USBD_CTRM | USBD_RESETM;
+
+    clear_sram();
 }
 
 void set_address(unsigned char address) {
@@ -47,8 +49,14 @@ void configure_endpoint_control(unsigned char endpoint) {
     USBD_COUNT_RX(endpoint) = USBD_NUMBLOCK_64;
     USBD_ADDR_TX(endpoint) = USBD_BUFF_TX_OFFSET(endpoint);
     USBD_ADDR_RX(endpoint) = USBD_BUFF_RX_OFFSET(endpoint);
-    USBD_EPR(endpoint) = USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL |
+    USBD_EPR(endpoint) |= USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL |
             USBD_STAT_TX_NAK;
+}
+
+void clear_sram(void) {
+    for (unsigned int i = 0; i < 1024; i += 4) {
+        SRAM_BYTE(i) = 0;
+    }
 }
 
 void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer, 
@@ -60,11 +68,31 @@ void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer,
     }
 }
 
+void copy_buffer_to_tx(unsigned char endpoint) {
+    unsigned char packet_length;
+
+    if (usb.tx_bytes_to_send > USB_DEFAULT_BUFFER_SIZE) {
+        packet_length = USB_DEFAULT_BUFFER_SIZE;
+    } else {
+        packet_length = usb.tx_bytes_to_send;
+    }
+
+    for (unsigned char i = 0; i < packet_length / 2; ++i) {
+        USBD_BUFF_TX_BYTE(endpoint, i * 2) = *(usb.tx_pointer + 2 * i) << 8 |
+                *(usb.tx_pointer + 2 * i + 1);
+    }
+
+    USBD_COUNT_TX(endpoint) = packet_length;
+    usb.tx_bytes_to_send -= packet_length;
+}
+
 void USB_LP_CAN1_RX0_IRQHandler(void) {
     // read interrupt flags
     volatile unsigned int usb_interrupt_flags = USBD_ISTR;
 
     if (usb_interrupt_flags & USBD_RESET) {
+        USBD_ISTR &= ~USBD_RESET;     // clear interrupt
+
         // initialize packet buffer description table
         USBD_BTABLE = USBD_BTABLE_OFFSET;
 
@@ -76,9 +104,9 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
         USBD_DADDR |= USBD_EF;
 
         usb.device_state = USB_DEVICE_STATE_DEFAULT;
-
-        USBD_ISTR &= ~USBD_RESET;     // clear interrupt
     } else if (usb_interrupt_flags & USBD_CTR) {
+        USBD_ISTR &= ~USBD_CTR;   // clear interrupt
+
         unsigned char current_endpoint = usb_interrupt_flags & USBD_EP_ID_MASK;
         unsigned char no_of_bytes = USBD_COUNT_RX(current_endpoint) &
                 USBD_COUNT_RX_MASK;
@@ -106,38 +134,37 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
             //     break;
             // }
 
-            // case UIS_TOKEN_IN: {
-            //     switch (current_endpoint) {
-            //         case ENDPOINT0: {
-            //             if (usb.device_state == USB_DEVICE_STATE_DEFAULT) {
-            //                 set_address(usb.device_address);
-            //             }
+            case USB_TOKEN_IN: {
+                switch (current_endpoint) {
+                    case ENDPOINT0: {
+                        if (usb.device_state == USB_DEVICE_STATE_ADDRESSED) {
+                            set_address(usb.device_address);
+                        }
 
-            //             break;
-            //         }
+                        break;
+                    }
 
-            //         case ENDPOINT1: {
-            //             USBHIDReport hid_report = {
-            //                 .x = 10,
-            //                 .y = 0,
-            //                 .buttons = 0
-            //             };
+                    // case ENDPOINT1: {
+                    //     USBHIDReport hid_report = {
+                    //         .x = 10,
+                    //         .y = 0,
+                    //         .buttons = 0
+                    //     };
 
-            //             endpoint1.tx_pointer = (unsigned char *)&hid_report;
-            //             endpoint1.tx_bytes_to_send = sizeof(hid_report);
+                    //     endpoint1.tx_pointer = (unsigned char *)&hid_report;
+                    //     endpoint1.tx_bytes_to_send = sizeof(hid_report);
 
-            //             // write_bytes_endpoint1();
+                    //     // write_bytes_endpoint1();
 
-            //             break;
-            //         }
-            //     }
+                    //     break;
+                    // }
+                }
 
-            //     break;
-            // }
+                break;
+            }
 
             case USB_TOKEN_SETUP: {
-                USBD_EPR(current_endpoint) |= USBD_STAT_RX_BIT0; // set NAK by
-                                                            // toggling bit 0
+                usb.control_stage = USB_CONTROL_STAGE_SETUP;
 
                 copy_rx_to_buffer(current_endpoint, endpoint0_buffer,
                         no_of_bytes);
@@ -152,7 +179,8 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                 usb.request.bRequest = endpoint0_buffer[1];
                 usb.request.wIndex = (unsigned short)(endpoint0_buffer[4] << 8
                         | endpoint0_buffer[5]);
-                usb.request.wLength = (unsigned short)((endpoint0_buffer[7] << 8)
+                usb.request.wLength = 
+                        (unsigned short)((endpoint0_buffer[7] << 8)
                         | USBD_BUFF_RX_BYTE(current_endpoint, 6));
 
                 switch (usb.request.bmRequestType.type) {
@@ -170,6 +198,11 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                                 &device_descriptor;
                                         usb.tx_bytes_to_send = 
                                                 sizeof(device_descriptor);
+
+                                        usb.control_stage =
+                                                USB_CONTROL_STAGE_DATA_IN;
+
+                                        copy_buffer_to_tx(current_endpoint);
                                         
                                         break;
                                     }
@@ -245,20 +278,25 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                 break;
                             }
 
-                            // case SETUP_DEVICE_REQS_SET_ADDRESS: {
-                            //     usb.request.wValue = (unsigned short)
-                            //             ((endpoint0_buffer[3] << 8) |
-                            //             endpoint0_buffer[2]);
+                            case SETUP_DEVICE_REQS_SET_ADDRESS: {
+                                usb.request.wValue = (unsigned short)
+                                        ((endpoint0_buffer[3] << 8) |
+                                        endpoint0_buffer[2]);
 
-                            //     // save received address
-                            //     usb.device_address = usb.request.wValue;
+                                // save received address
+                                usb.device_address = usb.request.wValue;
 
-                            //     usb.tx_bytes_to_send = 0;
+                                usb.tx_bytes_to_send = 0;
 
-                            //     usb.device_state = USB_DEVICE_STATE_ADDRESSED;
+                                usb.device_state = USB_DEVICE_STATE_ADDRESSED;
 
-                            //     break;
-                            // }
+                                usb.control_stage =
+                                                USB_CONTROL_STAGE_STATUS_IN;
+
+                                copy_buffer_to_tx(current_endpoint);
+
+                                break;
+                            }
 
                             // case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
                             //     usb.request.wValue = (unsigned short)
@@ -299,9 +337,12 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                     // }
                 }
 
-                USBD_EPR(current_endpoint) |= USBD_STAT_RX_BIT0; // set ACK by
-                                                            // toggling bit 0
-
+                // set ACK
+                USBD_EPR(current_endpoint) |= USBD_STAT_RX_BIT1 |
+                        USBD_STAT_TX_BIT1;
+                USBD_EPR(current_endpoint) |= USBD_STAT_RX_ACK;
+                USBD_EPR(current_endpoint) |= USBD_STAT_TX_ACK;
+                
                 // if (usb.device_error) {
                 //     USBFSD->UEP0_TX_LEN = 0;
                 //     USBFSD->UEP0_TX_CTRL |= TX_ANSWER_STALL;
@@ -315,7 +356,5 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                 break;
             }
         }
-
-        USBD_ISTR &= ~USBD_CTR;   // clear interrupt
     }
 }
