@@ -40,12 +40,12 @@
 #define USBD_BUFF_TX(X)             REG (SRAM_START + USBD_BUFF_TX_OFFSET(X))
 #define USBD_BUFF_RX(X)             REG (SRAM_START + USBD_BUFF_RX_OFFSET(X))
 
-#define USBD_BUFF_TX_BYTE(X, Y)     REG (SRAM_START + (USBD_BUFF_TX_OFFSET(X) \
+#define USBD_BUFF_TX_HALFWORD(X, Y) REG (SRAM_START + (USBD_BUFF_TX_OFFSET(X) \
                                             + (Y)) * 2)
-#define USBD_BUFF_RX_BYTE(X, Y)     REG (SRAM_START + (USBD_BUFF_RX_OFFSET(X) \
+#define USBD_BUFF_RX_HALFWORD(X, Y) REG (SRAM_START + (USBD_BUFF_RX_OFFSET(X) \
                                             + (Y)) * 2)
 
-#define SRAM_BYTE(Y)                REG (SRAM_START + (Y))
+#define SRAM_HALFWORD(Y)            REG (SRAM_START + (Y))
 
 // USBD_CNTR fields
 #define USBD_CTRM                   BIT 0x8000
@@ -84,12 +84,14 @@
 #define USBD_STAT_RX_BIT1           BIT 0x2000
 #define USBD_STAT_RX_BIT0           BIT 0x1000
 
+#define USBD_SETUP                  BIT 0x800
+
 #define USBD_EPTYPE_BULK            BIT 0x0 << 9
 #define USBD_EPTYPE_CONTROL         BIT 0x1 << 9
 #define USBD_EPTYPE_ISO             BIT 0x2 << 9
 #define USBD_EPTYPE_INTERRUPT       BIT 0x3 << 9
 
-#define USBD_SETUP                  BIT 0x800
+#define USBD_EP_KIND                BIT 0x100
 
 #define USBD_CTR_TX                 BIT 0x80
 
@@ -134,6 +136,13 @@ typedef struct USBEndpoint1 {
     volatile unsigned char tx_bytes_to_send;
     volatile unsigned char *tx_pointer;
 } USBEndpoint1;
+
+typedef struct USBDebugs {
+    volatile unsigned char reset_counter;
+    volatile unsigned char control_counter;
+    volatile unsigned char in_counter;
+    volatile unsigned char out_counter;
+} USBDebugs;
 
 void usb_init(void);
 

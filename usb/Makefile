@@ -14,7 +14,7 @@ flash: main.hex
 	wlink erase && wlink flash main.hex -v
 
 clean:
-	del /S *.o *.elf
+	rm -f $(BUILD_DIR)/*
 
 $(BUILD_DIR)/main.o: main.c
 	mkdir -p $(BUILD_DIR)
