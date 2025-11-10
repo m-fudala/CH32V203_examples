@@ -233,72 +233,70 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                         break;
                                     }
 
-                                    // case DESC_TYPE_CONFIGURATION: {
-                                    //     usb.tx_pointer = (unsigned char *)
-                                    //             &full_configuration_descriptor;
-                                    //     usb.tx_bytes_to_send = 
-                                    //             usb.request.wLength;
+                                    case DESC_TYPE_CONFIGURATION: {
+                                        usb.tx_pointer = (unsigned char *)
+                                                &full_configuration_descriptor;
+                                        usb.tx_bytes_to_send = 
+                                                usb.request.wLength;
 
-                                    //     break;
-                                    // }
+                                        break;
+                                    }
 
-                                    // case DESC_TYPE_HID_REPORT: {
-                                    //     usb.tx_pointer = 
-                                    //             (unsigned char *)
-                                    //             &hid_report_descriptor;
-                                    //     usb.tx_bytes_to_send = 
-                                    //             sizeof(hid_report_descriptor);
+                                    case DESC_TYPE_HID_REPORT: {
+                                        usb.tx_pointer = 
+                                                (unsigned char *)
+                                                &hid_report_descriptor;
+                                        usb.tx_bytes_to_send = 
+                                                sizeof(hid_report_descriptor);
 
-                                    //     break;
-                                    // }
+                                        break;
+                                    }
 
-                                    // case DESC_TYPE_STRING: {
-                                    //     switch(usb.request.wIndex) {
-                                    //         case STRING_DESCRIPTOR0: {
-                                    //             usb.tx_pointer = 
-                                    //                 (unsigned char *)
-                                    //                 &string_descriptor0;
-                                    //             usb.tx_bytes_to_send = 
-                                    //                 string_descriptor0.bLength;
-
-                                    //                 string_req++;
+                                    case DESC_TYPE_STRING: {
+                                        switch(usb.request.wIndex) {
+                                            case STRING_DESCRIPTOR0: {
+                                                usb.tx_pointer = 
+                                                    (unsigned char *)
+                                                    &string_descriptor0;
+                                                usb.tx_bytes_to_send = 
+                                                    string_descriptor0.bLength;
                                                 
-                                    //             break;
-                                    //         }
+                                                break;
+                                            }
 
-                                    //         case STRING_DESCRIPTOR_MANUFACTURER: {
-                                    //             usb.tx_pointer = 
-                                    //                 (unsigned char *)
-                                    //                 &string_descriptor_manufacturer;
-                                    //             usb.tx_bytes_to_send = 
-                                    //                 string_descriptor_manufacturer.bLength;
+                                            case STRING_DESCRIPTOR_MANUFACTURER: {
+                                                usb.tx_pointer = 
+                                                    (unsigned char *)
+                                                    &string_descriptor_manufacturer;
+                                                usb.tx_bytes_to_send = 
+                                                    string_descriptor_manufacturer.bLength;
                                                 
-                                    //             break;
-                                    //         }
+                                                break;
+                                            }
 
-                                    //         case STRING_DESCRIPTOR_PRODUCT: {
-                                    //             usb.tx_pointer = 
-                                    //                 (unsigned char *)
-                                    //                 &string_descriptor_product;
-                                    //             usb.tx_bytes_to_send = 
-                                    //                 string_descriptor_product.bLength;
+                                            case STRING_DESCRIPTOR_PRODUCT: {
+                                                usb.tx_pointer = 
+                                                    (unsigned char *)
+                                                    &string_descriptor_product;
+                                                usb.tx_bytes_to_send = 
+                                                    string_descriptor_product.bLength;
                                                 
-                                    //             break;
-                                    //         }
+                                                break;
+                                            }
 
-                                    //         case STRING_DESCRIPTOR_SERIAL_NUMBER: {
-                                    //             usb.tx_pointer = 
-                                    //                 (unsigned char *)
-                                    //                 &string_descriptor_serial_number;
-                                    //             usb.tx_bytes_to_send = 
-                                    //                 string_descriptor_serial_number.bLength;
+                                            case STRING_DESCRIPTOR_SERIAL_NUMBER: {
+                                                usb.tx_pointer = 
+                                                    (unsigned char *)
+                                                    &string_descriptor_serial_number;
+                                                usb.tx_bytes_to_send = 
+                                                    string_descriptor_serial_number.bLength;
                                                 
-                                    //             break;
-                                    //         }
-                                    //     }
+                                                break;
+                                            }
+                                        }
 
-                                    //     break;
-                                    // }
+                                        break;
+                                    }
                                 }
                                 
                                 break;
@@ -322,17 +320,17 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                 break;
                             }
 
-                            // case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
-                            //     usb.request.wValue = (unsigned short)
-                            //             ((endpoint0_buffer[3] << 8) |
-                            //             endpoint0_buffer[2]);
+                            case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
+                                usb.request.wValue = (unsigned short)
+                                        ((endpoint0_buffer[3] << 8) |
+                                        endpoint0_buffer[2]);
 
-                            //     usb.tx_bytes_to_send = 0;
+                                usb.tx_bytes_to_send = 0;
 
-                            //     usb.device_state = USB_DEVICE_STATE_CONFIGURED;
+                                usb.device_state = USB_DEVICE_STATE_CONFIGURED;
 
-                            //     break;
-                            // }
+                                break;
+                            }
 
                             default: {
                                 usb.device_error = REQ_NOT_IMPLEMENTED;
@@ -344,21 +342,21 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                         break;
                     }
 
-                    // case USB_SETUP_REQUEST_TYPE_TYPE_CLASS: {
-                    //     switch (usb.request.bRequest) {
-                    //         case HID_REQS_SET_IDLE: {
-                    //             usb.tx_bytes_to_send = 0;
-                    //         }
+                    case USB_SETUP_REQUEST_TYPE_TYPE_CLASS: {
+                        switch (usb.request.bRequest) {
+                            case HID_REQS_SET_IDLE: {
+                                usb.tx_bytes_to_send = 0;
+                            }
                         
-                    //         default: {
-                    //             usb.device_error = REQ_NOT_IMPLEMENTED;
+                            default: {
+                                usb.device_error = REQ_NOT_IMPLEMENTED;
 
-                    //             break;
-                    //         }
-                    //     }
+                                break;
+                            }
+                        }
 
-                    //     break;
-                    // }
+                        break;
+                    }
                 }
                 
                 if (usb.device_error) {
