@@ -73,7 +73,7 @@ void clear_sram(void) {
 }
 
 void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer, 
-        unsigned char length) {
+        unsigned char length) {    
     for (unsigned char i = 0; i < length / 2; ++i) {
         unsigned short halfword = USBD_BUFF_RX_HALFWORD(endpoint, i * 2);
         *(buffer + 2 * i) = (unsigned char)(halfword & 0xFF);
@@ -131,13 +131,19 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
 
         if (USBD_EPR(current_endpoint) & USBD_CTR_TX) {
             current_token = USB_TOKEN_IN;
+
+            USB_SetEP(current_endpoint, 0x00, USBD_CTR_TX);
         } else if (USBD_EPR(current_endpoint) & USBD_CTR_RX) {
             if (USBD_EPR(current_endpoint) & USBD_SETUP) {
                 current_token = USB_TOKEN_SETUP;
             } else {
                 current_token = USB_TOKEN_OUT;
             }
+
+            USB_SetEP(current_endpoint, USBD_STAT_RX_ACK, USBD_CTR_RX | USBD_STAT_RX_ACK);
         }
+
+        debugs.tokens++;
 
         switch (current_token) {
             case USB_TOKEN_OUT: {
@@ -158,6 +164,8 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
 
                             usb.control_stage = USB_CONTROL_STAGE_DATA_OUT;
                         }
+
+                        USB_SetEP(current_endpoint, USBD_STAT_RX_NAK, USBD_STAT_RX_ACK);
 
                         debugs.in_counter++;
 
@@ -221,8 +229,6 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
 
                                         usb.control_stage =
                                                 USB_CONTROL_STAGE_DATA_IN;
-
-                                        copy_buffer_to_tx(current_endpoint);
                                         
                                         break;
                                     }
@@ -359,6 +365,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                     usb.device_error = NO_ERROR;
                 } else {
                     // set ACK
+                    copy_buffer_to_tx(current_endpoint);
                     USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
                 }
 

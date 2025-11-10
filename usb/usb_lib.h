@@ -142,6 +142,7 @@ typedef struct USBDebugs {
     volatile unsigned char control_counter;
     volatile unsigned char in_counter;
     volatile unsigned char out_counter;
+    volatile unsigned char tokens;
 } USBDebugs;
 
 void usb_init(void);
