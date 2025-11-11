@@ -65,13 +65,13 @@
 #define USBD_EPR(X)                 REG (USBD_BASE + (X) * 0x4)
 
 #define USBD_ADDR_TX(X)             REG(SRAM_START + USBD_BTABLE_OFFSET \
-                                        + (X) * 0xF)
+                                        + (X) * 0x10)
 #define USBD_COUNT_TX(X)            REG(SRAM_START + USBD_BTABLE_OFFSET \
-                                        + (X) * 0xF + 0x4)
+                                        + (X) * 0x10 + 0x4)
 #define USBD_ADDR_RX(X)             REG(SRAM_START + USBD_BTABLE_OFFSET \
-                                        + (X) * 0xF + 0x8)
+                                        + (X) * 0x10 + 0x8)
 #define USBD_COUNT_RX(X)            REG(SRAM_START + USBD_BTABLE_OFFSET \
-                                        + (X) * 0xF + 0xC)
+                                        + (X) * 0x10 + 0xC)
 
 // USBD_EPR fields
 #define USBD_CTR_RX                 BIT 0x8000
@@ -132,6 +132,7 @@ typedef struct USB {
     volatile unsigned char *tx_pointer;
 } USB;
 
+// TODO: consolidate endpoint structs
 typedef struct USBEndpoint1 {
     volatile unsigned char tx_bytes_to_send;
     volatile unsigned char *tx_pointer;
@@ -150,11 +151,13 @@ void usb_init(void);
 void set_address(unsigned char address);
 
 void configure_endpoint_control(unsigned char endpoint);
+void configure_endpoint_interrupt(unsigned char endpoint);
 
 void clear_sram(void);
 void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer,
         unsigned char length);
 void copy_buffer_to_tx(unsigned char endpoint);
+void copy_buffer_to_tx_edp1(void);
 
 void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((interrupt()));
 

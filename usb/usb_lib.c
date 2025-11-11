@@ -63,7 +63,15 @@ void configure_endpoint_control(unsigned char endpoint) {
     USBD_ADDR_TX(endpoint) = USBD_BUFF_TX_OFFSET(endpoint);
     USBD_ADDR_RX(endpoint) = USBD_BUFF_RX_OFFSET(endpoint);
     USBD_EPR(endpoint) |= USBD_STAT_RX_ACK | USBD_EPTYPE_CONTROL |
-            USBD_STAT_TX_NAK;
+            USBD_STAT_TX_NAK | endpoint;
+}
+
+void configure_endpoint_interrupt(unsigned char endpoint) {
+    USBD_COUNT_RX(endpoint) = USBD_NUMBLOCK_64;
+    USBD_ADDR_TX(endpoint) = USBD_BUFF_TX_OFFSET(endpoint);
+    USBD_ADDR_RX(endpoint) = USBD_BUFF_RX_OFFSET(endpoint);
+    USBD_EPR(endpoint) |= USBD_STAT_RX_ACK | USBD_EPTYPE_INTERRUPT |
+            USBD_STAT_TX_ACK | endpoint;
 }
 
 void clear_sram(void) {
@@ -97,6 +105,24 @@ void copy_buffer_to_tx(unsigned char endpoint) {
 
     USBD_COUNT_TX(endpoint) = packet_length;
     usb.tx_bytes_to_send -= packet_length;
+}
+
+void copy_buffer_to_tx_edp1(void) {
+    unsigned char packet_length;
+
+    if (endpoint1.tx_bytes_to_send > USB_DEFAULT_BUFFER_SIZE) {
+        packet_length = USB_DEFAULT_BUFFER_SIZE;
+    } else {
+        packet_length = endpoint1.tx_bytes_to_send;
+    }
+
+    for (unsigned char i = 0; i < packet_length / 2; ++i) {
+        USBD_BUFF_TX_HALFWORD(1, i * 2) =
+                *(endpoint1.tx_pointer + 2 * i + 1) << 8 | *(endpoint1.tx_pointer + 2 * i);
+    }
+
+    USBD_COUNT_TX(1) = packet_length;
+    endpoint1.tx_bytes_to_send -= packet_length;
 }
 
 void USB_LP_CAN1_RX0_IRQHandler(void) {
@@ -172,20 +198,22 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                         break;
                     }
 
-                    // case ENDPOINT1: {
-                    //     USBHIDReport hid_report = {
-                    //         .x = 10,
-                    //         .y = 0,
-                    //         .buttons = 0
-                    //     };
+                    case ENDPOINT1: {
+                        USBHIDReport hid_report = {
+                            .x = 10,
+                            .y = 0,
+                            .buttons = 0
+                        };
 
-                    //     endpoint1.tx_pointer = (unsigned char *)&hid_report;
-                    //     endpoint1.tx_bytes_to_send = sizeof(hid_report);
+                        endpoint1.tx_pointer = (unsigned char *)&hid_report;
+                        endpoint1.tx_bytes_to_send = sizeof(hid_report);
 
-                    //     // write_bytes_endpoint1();
+                        copy_buffer_to_tx_edp1();
 
-                    //     break;
-                    // }
+                        USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
+
+                        break;
+                    }
                 }
 
                 break;
@@ -327,6 +355,9 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
 
                                 usb.tx_bytes_to_send = 0;
 
+                                // configure endpoint 1
+                                configure_endpoint_interrupt(1);
+
                                 usb.device_state = USB_DEVICE_STATE_CONFIGURED;
 
                                 break;
@@ -360,6 +391,8 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                 }
                 
                 if (usb.device_error) {
+                    USB_SetEP(current_endpoint, USBD_STAT_TX_STALL, USBD_STAT_TX_ACK);
+
                     usb.device_error = NO_ERROR;
                 } else {
                     // set ACK
