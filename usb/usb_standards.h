@@ -244,6 +244,7 @@ typedef struct USBStringDescriptor0 {
     unsigned short wLANGID0;
 } __attribute__((__packed__)) USBStringDescriptor0;
 
+#define STRING_LANGID_ENGLISH_US                    0x0409
 #define STRING_LANGID_HID                           0x04FF
 
 // structure of USB string descriptors

@@ -200,7 +200,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
 
                     case ENDPOINT1: {
                         USBHIDReport hid_report = {
-                            .x = 10,
+                            .x = 0,
                             .y = 0,
                             .buttons = 0
                         };
@@ -247,7 +247,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                         (endpoint0_buffer[2] << 8 |
                                         endpoint0_buffer[3]);
 
-                                switch (usb.request.wValue) {
+                                switch (usb.request.wValue & 0xFF) {
                                     case DESC_TYPE_DEVICE: {
                                         usb.tx_pointer = 
                                                 (unsigned char *)
@@ -281,7 +281,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                     }
 
                                     case DESC_TYPE_STRING: {
-                                        switch(usb.request.wIndex) {
+                                        switch((usb.request.wValue >> 8) & 0xFF) {
                                             case STRING_DESCRIPTOR0: {
                                                 usb.tx_pointer = 
                                                     (unsigned char *)
@@ -322,6 +322,12 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                                 break;
                                             }
                                         }
+
+                                        break;
+                                    }
+
+                                    default: {
+                                        usb.device_error = DESC_NOT_IMPLEMENTED;
 
                                         break;
                                     }

@@ -15,9 +15,9 @@ const USBDeviceDescriptor device_descriptor = {
     .idVendor = 0x6666,
     .idProduct = 0x1111,
     .bcdDevice = 0x0100,
-    .iManufacturer = 0,
-    .iProduct = 0,
-    .iSerialNumber = 0,
+    .iManufacturer = 1,
+    .iProduct = 2,
+    .iSerialNumber = 3,
     .bNumConfigurations = 1
 };
 
@@ -132,7 +132,7 @@ typedef enum USBStringDescriptorIndex {
 const USBStringDescriptor0 string_descriptor0 = {
     .bLength = sizeof(USBStringDescriptor0),
     .bDescriptorType = DESC_TYPE_STRING,
-    .wLANGID0 = STRING_LANGID_HID
+    .wLANGID0 = STRING_LANGID_ENGLISH_US
 };
 
 const USBStringDescriptor string_descriptor_manufacturer = {
@@ -148,9 +148,9 @@ const USBStringDescriptor string_descriptor_product = {
 };
 
 const USBStringDescriptor string_descriptor_serial_number = {
-    .bLength = 2 + 2 * 1,
+    .bLength = 2 + 2 * 3,
     .bDescriptorType = DESC_TYPE_STRING,
-    .bString = u"1"
+    .bString = u"1.0"
 };
 
 #endif

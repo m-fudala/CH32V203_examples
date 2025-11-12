@@ -115,7 +115,8 @@ typedef enum USBEndpoints {
 
 typedef enum USBErrors {
     NO_ERROR,
-    REQ_NOT_IMPLEMENTED
+    REQ_NOT_IMPLEMENTED,
+    DESC_NOT_IMPLEMENTED
 } USBErrors;
 
 typedef struct USB {
