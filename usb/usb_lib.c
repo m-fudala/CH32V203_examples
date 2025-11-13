@@ -98,9 +98,16 @@ void copy_buffer_to_tx(unsigned char endpoint) {
         packet_length = usb.tx_bytes_to_send;
     }
 
-    for (unsigned char i = 0; i < packet_length / 2; ++i) {
+    unsigned char i = 0;
+
+    for (i; i < packet_length / 2; ++i) {
         USBD_BUFF_TX_HALFWORD(endpoint, i * 2) =
                 *(usb.tx_pointer + 2 * i + 1) << 8 | *(usb.tx_pointer + 2 * i);
+    }
+
+    if (packet_length % 2) {
+        USBD_BUFF_TX_HALFWORD(endpoint, i * 2) =
+                *(usb.tx_pointer + 2 * i);
     }
 
     USBD_COUNT_TX(endpoint) = packet_length;
@@ -116,9 +123,16 @@ void copy_buffer_to_tx_edp1(void) {
         packet_length = endpoint1.tx_bytes_to_send;
     }
 
+    unsigned char i = 0;
+
     for (unsigned char i = 0; i < packet_length / 2; ++i) {
         USBD_BUFF_TX_HALFWORD(1, i * 2) =
                 *(endpoint1.tx_pointer + 2 * i + 1) << 8 | *(endpoint1.tx_pointer + 2 * i);
+    }
+
+    if (packet_length % 2) {
+        USBD_BUFF_TX_HALFWORD(1, i * 2) =
+                *(endpoint1.tx_pointer + 2 * i);
     }
 
     USBD_COUNT_TX(1) = packet_length;
@@ -185,7 +199,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                             set_address(usb.device_address);
                         }
 
-                        if (usb.control_stage = USB_CONTROL_STAGE_DATA_IN) {
+                        if (usb.control_stage == USB_CONTROL_STAGE_DATA_IN) {
                             USBD_EPR(current_endpoint) |= USBD_EP_KIND;
 
                             usb.control_stage = USB_CONTROL_STAGE_DATA_OUT;
@@ -265,7 +279,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                         usb.tx_pointer = (unsigned char *)
                                                 &full_configuration_descriptor;
                                         usb.tx_bytes_to_send = 
-                                                usb.request.wLength;
+                                                usb.request.wLength;c
 
                                         break;
                                     }
@@ -369,6 +383,22 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                                 break;
                             }
 
+                            case SETUP_DEVICE_REQS_GET_CONFIGURATION: {
+                                unsigned char configuration_index = 0;
+                                
+                                if (usb.device_state ==
+                                        USB_DEVICE_STATE_CONFIGURED) {
+                                    
+                                    configuration_index = 1;
+                                }
+
+                                usb.tx_pointer = (unsigned char *)
+                                        &configuration_index;
+                                usb.tx_bytes_to_send = 1;
+
+                                break;
+                            }
+
                             default: {
                                 usb.device_error = REQ_NOT_IMPLEMENTED;
 
@@ -383,6 +413,8 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                         switch (usb.request.bRequest) {
                             case HID_REQS_SET_IDLE: {
                                 usb.tx_bytes_to_send = 0;
+
+                                break;
                             }
                         
                             default: {
