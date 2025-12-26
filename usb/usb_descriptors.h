@@ -117,7 +117,7 @@ const USBFullConfigurationDescriptor full_configuration_descriptor = {
             .reserved1513 = 0
         },
 
-        .bInterval = ENDPOINT_INTERVALS_5ms
+        .bInterval = ENDPOINT_INTERVALS_100ms
     }
 };
 

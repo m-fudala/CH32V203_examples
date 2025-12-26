@@ -35,8 +35,8 @@
 #define USBD_BTABLE                 REG (USBD_BASE + 0x50)
 #define SRAM_START                  (uint32_t)0x40006000
 
-#define USBD_BUFF_TX_OFFSET(X)      0x40 + (X) * 0x40
-#define USBD_BUFF_RX_OFFSET(X)      0x40 + 0x40 + (X) * 0x40
+#define USBD_BUFF_TX_OFFSET(X)      0x40 + (X) * 0x80
+#define USBD_BUFF_RX_OFFSET(X)      0x80 + (X) * 0x80
 #define USBD_BUFF_TX(X)             REG (SRAM_START + USBD_BUFF_TX_OFFSET(X))
 #define USBD_BUFF_RX(X)             REG (SRAM_START + USBD_BUFF_RX_OFFSET(X))
 
@@ -119,6 +119,12 @@ typedef enum USBErrors {
     DESC_NOT_IMPLEMENTED
 } USBErrors;
 
+typedef struct USBEndpoint {
+    volatile unsigned char tx_bytes_to_send;
+    volatile unsigned char *tx_pointer;
+    volatile unsigned char rx_buffer[USB_DEFAULT_BUFFER_SIZE];
+} USBEndpoint;
+
 typedef struct USB {
     volatile unsigned char device_address;
 
@@ -129,15 +135,8 @@ typedef struct USB {
 
     USBSetupRequest request;
 
-    volatile unsigned char tx_bytes_to_send;
-    volatile unsigned char *tx_pointer;
+    USBEndpoint endpoints[2];   // endpoints 0, 1
 } USB;
-
-// TODO: consolidate endpoint structs
-typedef struct USBEndpoint1 {
-    volatile unsigned char tx_bytes_to_send;
-    volatile unsigned char *tx_pointer;
-} USBEndpoint1;
 
 typedef struct USBDebugs {
     volatile unsigned char reset_counter;
@@ -155,10 +154,16 @@ void configure_endpoint_control(unsigned char endpoint);
 void configure_endpoint_interrupt(unsigned char endpoint);
 
 void clear_sram(void);
-void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer,
-        unsigned char length);
+void copy_rx_to_buffer(unsigned char endpoint, unsigned char length);
 void copy_buffer_to_tx(unsigned char endpoint);
-void copy_buffer_to_tx_edp1(void);
+void set_hid_report(USBHIDReport *report, unsigned char size);
+
+void handle_out_packet(unsigned char current_endpoint,
+    unsigned char no_of_bytes);
+void handle_in_packet(unsigned char current_endpoint,
+    unsigned char no_of_bytes);
+void handle_setup_packet(unsigned char current_endpoint,
+    unsigned char no_of_bytes);
 
 void USB_LP_CAN1_RX0_IRQHandler(void) __attribute__((interrupt()));
 

@@ -2,10 +2,7 @@
 #include "usb_descriptors.h"
 
 USB usb;
-USBEndpoint1 endpoint1;
 USBDebugs debugs;
-
-unsigned char endpoint0_buffer[USB_DEFAULT_BUFFER_SIZE];
 
 void usb_init(void) {
     // GPIO settings
@@ -80,63 +77,301 @@ void clear_sram(void) {
     }
 }
 
-void copy_rx_to_buffer(unsigned char endpoint, unsigned char* buffer, 
-        unsigned char length) {    
+void copy_rx_to_buffer(unsigned char endpoint, unsigned char length) {   
     for (unsigned char i = 0; i < length / 2; ++i) {
         unsigned short halfword = USBD_BUFF_RX_HALFWORD(endpoint, i * 2);
-        *(buffer + 2 * i) = (unsigned char)(halfword & 0xFF);
-        *(buffer + 2 * i + 1) = (unsigned char)((halfword >> 8) & 0xFF);
+
+        *(usb.endpoints[endpoint].rx_buffer + 2 * i) =
+                (unsigned char)(halfword & 0xFF);
+        *(usb.endpoints[endpoint].rx_buffer + 2 * i + 1) =
+                (unsigned char)((halfword >> 8) & 0xFF);
     }
 }
 
 void copy_buffer_to_tx(unsigned char endpoint) {
     unsigned char packet_length;
 
-    if (usb.tx_bytes_to_send > USB_DEFAULT_BUFFER_SIZE) {
+    if (usb.endpoints[endpoint].tx_bytes_to_send > USB_DEFAULT_BUFFER_SIZE) {
         packet_length = USB_DEFAULT_BUFFER_SIZE;
     } else {
-        packet_length = usb.tx_bytes_to_send;
+        packet_length = usb.endpoints[endpoint].tx_bytes_to_send;
     }
 
     unsigned char i = 0;
 
     for (i; i < packet_length / 2; ++i) {
         USBD_BUFF_TX_HALFWORD(endpoint, i * 2) =
-                *(usb.tx_pointer + 2 * i + 1) << 8 | *(usb.tx_pointer + 2 * i);
+                *(usb.endpoints[endpoint].tx_pointer + 2 * i + 1) << 8 |
+                *(usb.endpoints[endpoint].tx_pointer + 2 * i);
     }
 
+    // handle odd number packets
     if (packet_length % 2) {
         USBD_BUFF_TX_HALFWORD(endpoint, i * 2) =
-                *(usb.tx_pointer + 2 * i);
+                *(usb.endpoints[endpoint].tx_pointer + 2 * i);
     }
 
     USBD_COUNT_TX(endpoint) = packet_length;
-    usb.tx_bytes_to_send -= packet_length;
+    usb.endpoints[endpoint].tx_bytes_to_send -= packet_length;
 }
 
-void copy_buffer_to_tx_edp1(void) {
-    unsigned char packet_length;
+void set_hid_report(USBHIDReport *report, unsigned char size) {
+    usb.endpoints[1].tx_pointer = (unsigned char *)report;
+    usb.endpoints[1].tx_bytes_to_send = size;
+}
 
-    if (endpoint1.tx_bytes_to_send > USB_DEFAULT_BUFFER_SIZE) {
-        packet_length = USB_DEFAULT_BUFFER_SIZE;
+void handle_out_packet(unsigned char current_endpoint,
+    unsigned char no_of_bytes) {
+
+    debugs.out_counter++;
+}
+
+void handle_in_packet(unsigned char current_endpoint,
+    unsigned char no_of_bytes) {
+
+    switch (current_endpoint) {
+        case ENDPOINT0: {
+            if (usb.device_state == USB_DEVICE_STATE_ADDRESSED) {
+                set_address(usb.device_address);
+            }
+
+            if (usb.control_stage == USB_CONTROL_STAGE_DATA_IN) {
+                USBD_EPR(current_endpoint) |= USBD_EP_KIND;
+
+                usb.control_stage = USB_CONTROL_STAGE_DATA_OUT;
+            }
+
+            USB_SetEP(current_endpoint, USBD_STAT_RX_NAK, USBD_STAT_RX_ACK);
+
+            debugs.in_counter++;
+
+            break;
+        }
+
+        case ENDPOINT1: {
+            usb.endpoints[1].tx_bytes_to_send = 3;  // TODO: something about it
+            copy_buffer_to_tx(current_endpoint);
+
+            USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
+
+            break;
+        }
+    }
+}
+
+void handle_setup_packet(unsigned char current_endpoint,
+    unsigned char no_of_bytes) {
+
+    usb.control_stage = USB_CONTROL_STAGE_SETUP;
+
+    copy_rx_to_buffer(current_endpoint, no_of_bytes);
+    
+    usb.request.bmRequestType.transfer_direction =
+            GET_USB_SETUP_REQUEST_TYPE_DIR(usb.endpoints[current_endpoint].
+            rx_buffer[0]);
+    usb.request.bmRequestType.type =
+            GET_USB_SETUP_REQUEST_TYPE_TYPE(usb.endpoints[current_endpoint].
+            rx_buffer[0]);
+    usb.request.bmRequestType.recipent =
+            GET_USB_SETUP_REQUEST_TYPE_REC(usb.endpoints[current_endpoint].
+                rx_buffer[0]);
+
+    usb.request.bRequest = usb.endpoints[current_endpoint].rx_buffer[1];
+    usb.request.wIndex = (unsigned short)(usb.endpoints[current_endpoint].
+            rx_buffer[4] << 8 | usb.endpoints[current_endpoint].rx_buffer[5]);
+    usb.request.wLength = (unsigned short)((usb.endpoints[current_endpoint].
+            rx_buffer[7] << 8) | USBD_BUFF_RX_HALFWORD(current_endpoint, 6));
+
+    switch (usb.request.bmRequestType.type) {
+        case USB_SETUP_REQUEST_TYPE_TYPE_STANDARD: {
+            switch (usb.request.bRequest) {
+                case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
+                    usb.request.wValue = (unsigned short)(usb.endpoints
+                            [current_endpoint].rx_buffer[2] << 8 |
+                            usb.endpoints[current_endpoint].rx_buffer[3]);
+
+                    switch (usb.request.wValue & 0xFF) {
+                        case DESC_TYPE_DEVICE: {
+                            usb.endpoints[current_endpoint].tx_pointer =
+                                    (unsigned char *)&device_descriptor;
+                            usb.endpoints[current_endpoint].tx_bytes_to_send =
+                                    sizeof(device_descriptor);
+
+                            usb.control_stage = USB_CONTROL_STAGE_DATA_IN;
+                            
+                            break;
+                        }
+
+                        case DESC_TYPE_CONFIGURATION: {
+                            usb.endpoints[current_endpoint].tx_pointer =
+                                    (unsigned char *)
+                                    &full_configuration_descriptor;
+                            usb.endpoints[current_endpoint].tx_bytes_to_send =
+                                    usb.request.wLength;
+
+                            break;
+                        }
+
+                        case DESC_TYPE_HID_REPORT: {
+                            usb.endpoints[current_endpoint].tx_pointer =
+                                    (unsigned char *)&hid_report_descriptor;
+                            usb.endpoints[current_endpoint].tx_bytes_to_send =
+                                    sizeof(hid_report_descriptor);
+
+                            break;
+                        }
+
+                        case DESC_TYPE_STRING: {
+                            switch((usb.request.wValue >> 8) & 0xFF) {
+                                case STRING_DESCRIPTOR0: {
+                                    usb.endpoints[current_endpoint].
+                                            tx_pointer =(unsigned char *)
+                                            &string_descriptor0;
+                                    usb.endpoints[current_endpoint].
+                                            tx_bytes_to_send =
+                                            string_descriptor0.bLength;
+                                    
+                                    break;
+                                }
+
+                                case STRING_DESCRIPTOR_MANUFACTURER: {
+                                    usb.endpoints[current_endpoint].
+                                            tx_pointer = (unsigned char *)
+                                            &string_descriptor_manufacturer;
+                                    usb.endpoints[current_endpoint].
+                                            tx_bytes_to_send =
+                                            string_descriptor_manufacturer.
+                                            bLength;
+                                    
+                                    break;
+                                }
+
+                                case STRING_DESCRIPTOR_PRODUCT: {
+                                    usb.endpoints[current_endpoint].
+                                            tx_pointer = (unsigned char *)
+                                            &string_descriptor_product;
+                                    usb.endpoints[current_endpoint].
+                                            tx_bytes_to_send =
+                                            string_descriptor_product.bLength;
+                                    
+                                    break;
+                                }
+
+                                case STRING_DESCRIPTOR_SERIAL_NUMBER: {
+                                    usb.endpoints[current_endpoint].
+                                            tx_pointer = (unsigned char *)
+                                            &string_descriptor_serial_number;
+                                    usb.endpoints[current_endpoint].
+                                            tx_bytes_to_send =
+                                            string_descriptor_serial_number.
+                                            bLength;
+                                    
+                                    break;
+                                }
+                            }
+
+                            break;
+                        }
+
+                        default: {
+                            usb.device_error = DESC_NOT_IMPLEMENTED;
+
+                            break;
+                        }
+                    }
+                    
+                    break;
+                }
+
+                case SETUP_DEVICE_REQS_SET_ADDRESS: {
+                    usb.request.wValue = (unsigned short)
+                            ((usb.endpoints[current_endpoint].
+                            rx_buffer[3] << 8) | usb.
+                            endpoints[current_endpoint].rx_buffer[2]);
+
+                    // save received address
+                    usb.device_address = usb.request.wValue;
+
+                    usb.endpoints[current_endpoint].tx_bytes_to_send = 0;
+
+                    usb.device_state = USB_DEVICE_STATE_ADDRESSED;
+
+                    usb.control_stage = USB_CONTROL_STAGE_STATUS_IN;
+
+                    break;
+                }
+
+                case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
+                    usb.request.wValue = (unsigned short)((usb.
+                            endpoints[current_endpoint].rx_buffer[3] << 8) |
+                            usb.endpoints[current_endpoint].rx_buffer[2]);
+
+                    usb.endpoints[current_endpoint].tx_bytes_to_send = 0;
+
+                    // configure endpoint 1
+                    configure_endpoint_interrupt(1);
+
+                    usb.device_state = USB_DEVICE_STATE_CONFIGURED;
+
+                    break;
+                }
+
+                case SETUP_DEVICE_REQS_GET_CONFIGURATION: {
+                    unsigned char configuration_index = 0;
+                    
+                    if (usb.device_state ==
+                            USB_DEVICE_STATE_CONFIGURED) {
+                        
+                        configuration_index = 1;
+                    }
+
+                    usb.endpoints[current_endpoint].tx_pointer =
+                            (unsigned char *)&configuration_index;
+                    usb.endpoints[current_endpoint].tx_bytes_to_send = 1;
+
+                    break;
+                }
+
+                default: {
+                    usb.device_error = REQ_NOT_IMPLEMENTED;
+
+                    break;
+                }
+            }
+
+            break;
+        }
+
+        case USB_SETUP_REQUEST_TYPE_TYPE_CLASS: {
+            switch (usb.request.bRequest) {
+                case HID_REQS_SET_IDLE: {
+                    usb.endpoints[current_endpoint].tx_bytes_to_send = 0;
+
+                    break;
+                }
+            
+                default: {
+                    usb.device_error = REQ_NOT_IMPLEMENTED;
+
+                    break;
+                }
+            }
+
+            break;
+        }
+    }
+    
+    if (usb.device_error) {
+        USB_SetEP(current_endpoint, USBD_STAT_TX_STALL, USBD_STAT_TX_ACK);
+
+        usb.device_error = NO_ERROR;
     } else {
-        packet_length = endpoint1.tx_bytes_to_send;
+        // set ACK
+        copy_buffer_to_tx(current_endpoint);
+        USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
     }
 
-    unsigned char i = 0;
-
-    for (unsigned char i = 0; i < packet_length / 2; ++i) {
-        USBD_BUFF_TX_HALFWORD(1, i * 2) =
-                *(endpoint1.tx_pointer + 2 * i + 1) << 8 | *(endpoint1.tx_pointer + 2 * i);
-    }
-
-    if (packet_length % 2) {
-        USBD_BUFF_TX_HALFWORD(1, i * 2) =
-                *(endpoint1.tx_pointer + 2 * i);
-    }
-
-    USBD_COUNT_TX(1) = packet_length;
-    endpoint1.tx_bytes_to_send -= packet_length;
+    debugs.control_counter++;
 }
 
 void USB_LP_CAN1_RX0_IRQHandler(void) {
@@ -180,265 +415,27 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                 current_token = USB_TOKEN_OUT;
             }
 
-            USB_SetEP(current_endpoint, USBD_STAT_RX_ACK, USBD_CTR_RX | USBD_STAT_RX_ACK);
+            USB_SetEP(current_endpoint, USBD_STAT_RX_ACK, USBD_CTR_RX |
+                    USBD_STAT_RX_ACK);
         }
 
         debugs.tokens++;
 
         switch (current_token) {
             case USB_TOKEN_OUT: {
-                debugs.out_counter++;
+                handle_out_packet(current_endpoint, no_of_bytes);
 
                 break;
             }
 
             case USB_TOKEN_IN: {
-                switch (current_endpoint) {
-                    case ENDPOINT0: {
-                        if (usb.device_state == USB_DEVICE_STATE_ADDRESSED) {
-                            set_address(usb.device_address);
-                        }
-
-                        if (usb.control_stage == USB_CONTROL_STAGE_DATA_IN) {
-                            USBD_EPR(current_endpoint) |= USBD_EP_KIND;
-
-                            usb.control_stage = USB_CONTROL_STAGE_DATA_OUT;
-                        }
-
-                        USB_SetEP(current_endpoint, USBD_STAT_RX_NAK, USBD_STAT_RX_ACK);
-
-                        debugs.in_counter++;
-
-                        break;
-                    }
-
-                    case ENDPOINT1: {
-                        USBHIDReport hid_report = {
-                            .x = 0,
-                            .y = 0,
-                            .buttons = 0
-                        };
-
-                        endpoint1.tx_pointer = (unsigned char *)&hid_report;
-                        endpoint1.tx_bytes_to_send = sizeof(hid_report);
-
-                        copy_buffer_to_tx_edp1();
-
-                        USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
-
-                        break;
-                    }
-                }
+                handle_in_packet(current_endpoint, no_of_bytes);
 
                 break;
             }
 
             case USB_TOKEN_SETUP: {
-                usb.control_stage = USB_CONTROL_STAGE_SETUP;
-
-                copy_rx_to_buffer(current_endpoint, endpoint0_buffer,
-                        no_of_bytes);
-                
-                usb.request.bmRequestType.transfer_direction = 
-                        GET_USB_SETUP_REQUEST_TYPE_DIR(endpoint0_buffer[0]);
-                usb.request.bmRequestType.type = 
-                        GET_USB_SETUP_REQUEST_TYPE_TYPE(endpoint0_buffer[0]);
-                usb.request.bmRequestType.recipent = 
-                        GET_USB_SETUP_REQUEST_TYPE_REC(endpoint0_buffer[0]);
-
-                usb.request.bRequest = endpoint0_buffer[1];
-                usb.request.wIndex = (unsigned short)(endpoint0_buffer[4] << 8
-                        | endpoint0_buffer[5]);
-                usb.request.wLength = 
-                        (unsigned short)((endpoint0_buffer[7] << 8)
-                        | USBD_BUFF_RX_HALFWORD(current_endpoint, 6));
-
-                switch (usb.request.bmRequestType.type) {
-                    case USB_SETUP_REQUEST_TYPE_TYPE_STANDARD: {
-                        switch (usb.request.bRequest) {
-                            case SETUP_DEVICE_REQS_GET_DESCRIPTOR: {
-                                usb.request.wValue = (unsigned short)
-                                        (endpoint0_buffer[2] << 8 |
-                                        endpoint0_buffer[3]);
-
-                                switch (usb.request.wValue & 0xFF) {
-                                    case DESC_TYPE_DEVICE: {
-                                        usb.tx_pointer = 
-                                                (unsigned char *)
-                                                &device_descriptor;
-                                        usb.tx_bytes_to_send = 
-                                                sizeof(device_descriptor);
-
-                                        usb.control_stage =
-                                                USB_CONTROL_STAGE_DATA_IN;
-                                        
-                                        break;
-                                    }
-
-                                    case DESC_TYPE_CONFIGURATION: {
-                                        usb.tx_pointer = (unsigned char *)
-                                                &full_configuration_descriptor;
-                                        usb.tx_bytes_to_send = 
-                                                usb.request.wLength;c
-
-                                        break;
-                                    }
-
-                                    case DESC_TYPE_HID_REPORT: {
-                                        usb.tx_pointer = 
-                                                (unsigned char *)
-                                                &hid_report_descriptor;
-                                        usb.tx_bytes_to_send = 
-                                                sizeof(hid_report_descriptor);
-
-                                        break;
-                                    }
-
-                                    case DESC_TYPE_STRING: {
-                                        switch((usb.request.wValue >> 8) & 0xFF) {
-                                            case STRING_DESCRIPTOR0: {
-                                                usb.tx_pointer = 
-                                                    (unsigned char *)
-                                                    &string_descriptor0;
-                                                usb.tx_bytes_to_send = 
-                                                    string_descriptor0.bLength;
-                                                
-                                                break;
-                                            }
-
-                                            case STRING_DESCRIPTOR_MANUFACTURER: {
-                                                usb.tx_pointer = 
-                                                    (unsigned char *)
-                                                    &string_descriptor_manufacturer;
-                                                usb.tx_bytes_to_send = 
-                                                    string_descriptor_manufacturer.bLength;
-                                                
-                                                break;
-                                            }
-
-                                            case STRING_DESCRIPTOR_PRODUCT: {
-                                                usb.tx_pointer = 
-                                                    (unsigned char *)
-                                                    &string_descriptor_product;
-                                                usb.tx_bytes_to_send = 
-                                                    string_descriptor_product.bLength;
-                                                
-                                                break;
-                                            }
-
-                                            case STRING_DESCRIPTOR_SERIAL_NUMBER: {
-                                                usb.tx_pointer = 
-                                                    (unsigned char *)
-                                                    &string_descriptor_serial_number;
-                                                usb.tx_bytes_to_send = 
-                                                    string_descriptor_serial_number.bLength;
-                                                
-                                                break;
-                                            }
-                                        }
-
-                                        break;
-                                    }
-
-                                    default: {
-                                        usb.device_error = DESC_NOT_IMPLEMENTED;
-
-                                        break;
-                                    }
-                                }
-                                
-                                break;
-                            }
-
-                            case SETUP_DEVICE_REQS_SET_ADDRESS: {
-                                usb.request.wValue = (unsigned short)
-                                        ((endpoint0_buffer[3] << 8) |
-                                        endpoint0_buffer[2]);
-
-                                // save received address
-                                usb.device_address = usb.request.wValue;
-
-                                usb.tx_bytes_to_send = 0;
-
-                                usb.device_state = USB_DEVICE_STATE_ADDRESSED;
-
-                                usb.control_stage =
-                                                USB_CONTROL_STAGE_STATUS_IN;
-
-                                break;
-                            }
-
-                            case SETUP_DEVICE_REQS_SET_CONFIGURATION: {
-                                usb.request.wValue = (unsigned short)
-                                        ((endpoint0_buffer[3] << 8) |
-                                        endpoint0_buffer[2]);
-
-                                usb.tx_bytes_to_send = 0;
-
-                                // configure endpoint 1
-                                configure_endpoint_interrupt(1);
-
-                                usb.device_state = USB_DEVICE_STATE_CONFIGURED;
-
-                                break;
-                            }
-
-                            case SETUP_DEVICE_REQS_GET_CONFIGURATION: {
-                                unsigned char configuration_index = 0;
-                                
-                                if (usb.device_state ==
-                                        USB_DEVICE_STATE_CONFIGURED) {
-                                    
-                                    configuration_index = 1;
-                                }
-
-                                usb.tx_pointer = (unsigned char *)
-                                        &configuration_index;
-                                usb.tx_bytes_to_send = 1;
-
-                                break;
-                            }
-
-                            default: {
-                                usb.device_error = REQ_NOT_IMPLEMENTED;
-
-                                break;
-                            }
-                        }
-
-                        break;
-                    }
-
-                    case USB_SETUP_REQUEST_TYPE_TYPE_CLASS: {
-                        switch (usb.request.bRequest) {
-                            case HID_REQS_SET_IDLE: {
-                                usb.tx_bytes_to_send = 0;
-
-                                break;
-                            }
-                        
-                            default: {
-                                usb.device_error = REQ_NOT_IMPLEMENTED;
-
-                                break;
-                            }
-                        }
-
-                        break;
-                    }
-                }
-                
-                if (usb.device_error) {
-                    USB_SetEP(current_endpoint, USBD_STAT_TX_STALL, USBD_STAT_TX_ACK);
-
-                    usb.device_error = NO_ERROR;
-                } else {
-                    // set ACK
-                    copy_buffer_to_tx(current_endpoint);
-                    USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
-                }
-
-                debugs.control_counter++;
+                handle_setup_packet(current_endpoint, no_of_bytes);
 
                 break;
             }

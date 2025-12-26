@@ -227,6 +227,7 @@ typedef struct USBEndpointDescriptor {
 
 // USB endpoint intervals
 #define ENDPOINT_INTERVALS_5ms                      5
+#define ENDPOINT_INTERVALS_100ms                    100
 #define ENDPOINT_INTERVALS_1000ms                   1000
 
 // structure of USB full configuration descriptor

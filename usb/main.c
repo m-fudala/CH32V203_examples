@@ -14,6 +14,15 @@ int main(void) {
 
     usb_init();
 
+    // populate with some values
+    USBHIDReport hid_report = {
+        .x = 0,
+        .y = 0,
+        .buttons = 0
+    };
+
+    set_hid_report(&hid_report, sizeof(hid_report));
+
     while(1);
 }
 
