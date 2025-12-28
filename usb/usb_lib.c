@@ -206,8 +206,14 @@ void handle_setup_packet(unsigned char current_endpoint,
                             usb.endpoints[current_endpoint].tx_pointer =
                                     (unsigned char *)
                                     &full_configuration_descriptor;
-                            usb.endpoints[current_endpoint].tx_bytes_to_send =
-                                    usb.request.wLength;
+                            
+                            if (usb.request.wLength == 0xFF) {
+                                usb.endpoints[current_endpoint].tx_bytes_to_send =
+                                        sizeof(full_configuration_descriptor);
+                            } else {
+                                usb.endpoints[current_endpoint].tx_bytes_to_send =
+                                        usb.request.wLength;
+                            }
 
                             break;
                         }
