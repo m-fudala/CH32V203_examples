@@ -33,6 +33,9 @@ typedef struct USBHIDDescriptor {
 #define HID_REQS_SET_IDLE	                        0x0A
 #define HID_REQS_SET_PROTOCOL	                    0x0B
 
+// size of HID report
+#define HID_REPORT_BYTES                            0x03
+
 // structure of HID report
 typedef struct USBHIDReport {
     char x;

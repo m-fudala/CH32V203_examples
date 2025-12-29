@@ -43,7 +43,7 @@ void set_address(unsigned char address) {
     }
 }
 
-static void USB_SetEP(unsigned char endpoint, short value, short mask) {
+static void set_endpoint(unsigned char endpoint, short value, short mask) {
     unsigned short toggle = 0b0111000001110000;
     unsigned short rc_w0 = 0b1000000010000000;
     unsigned short rw = 0b0000011100001111;
@@ -115,9 +115,8 @@ void copy_buffer_to_tx(unsigned char endpoint) {
     usb.endpoints[endpoint].tx_bytes_to_send -= packet_length;
 }
 
-void set_hid_report(USBHIDReport *report, unsigned char size) {
+void set_hid_report(USBHIDReport *report) {
     usb.endpoints[1].tx_pointer = (unsigned char *)report;
-    usb.endpoints[1].tx_bytes_to_send = size;
 }
 
 void handle_out_packet(unsigned char current_endpoint,
@@ -141,7 +140,7 @@ void handle_in_packet(unsigned char current_endpoint,
                 usb.control_stage = USB_CONTROL_STAGE_DATA_OUT;
             }
 
-            USB_SetEP(current_endpoint, USBD_STAT_RX_NAK, USBD_STAT_RX_ACK);
+            set_endpoint(current_endpoint, USBD_STAT_RX_NAK, USBD_STAT_RX_ACK);
 
             debugs.in_counter++;
 
@@ -149,10 +148,10 @@ void handle_in_packet(unsigned char current_endpoint,
         }
 
         case ENDPOINT1: {
-            usb.endpoints[1].tx_bytes_to_send = 3;  // TODO: something about it
+            usb.endpoints[1].tx_bytes_to_send = HID_REPORT_BYTES;
             copy_buffer_to_tx(current_endpoint);
 
-            USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
+            set_endpoint(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
 
             break;
         }
@@ -368,13 +367,13 @@ void handle_setup_packet(unsigned char current_endpoint,
     }
     
     if (usb.device_error) {
-        USB_SetEP(current_endpoint, USBD_STAT_TX_STALL, USBD_STAT_TX_ACK);
+        set_endpoint(current_endpoint, USBD_STAT_TX_STALL, USBD_STAT_TX_ACK);
 
         usb.device_error = NO_ERROR;
     } else {
         // set ACK
         copy_buffer_to_tx(current_endpoint);
-        USB_SetEP(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
+        set_endpoint(current_endpoint, USBD_STAT_TX_ACK, USBD_STAT_TX_ACK);
     }
 
     debugs.control_counter++;
@@ -413,7 +412,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
         if (USBD_EPR(current_endpoint) & USBD_CTR_TX) {
             current_token = USB_TOKEN_IN;
 
-            USB_SetEP(current_endpoint, 0x00, USBD_CTR_TX);
+            set_endpoint(current_endpoint, 0x00, USBD_CTR_TX);
         } else if (USBD_EPR(current_endpoint) & USBD_CTR_RX) {
             if (USBD_EPR(current_endpoint) & USBD_SETUP) {
                 current_token = USB_TOKEN_SETUP;
@@ -421,7 +420,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void) {
                 current_token = USB_TOKEN_OUT;
             }
 
-            USB_SetEP(current_endpoint, USBD_STAT_RX_ACK, USBD_CTR_RX |
+            set_endpoint(current_endpoint, USBD_STAT_RX_ACK, USBD_CTR_RX |
                     USBD_STAT_RX_ACK);
         }
 

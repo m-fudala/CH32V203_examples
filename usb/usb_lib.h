@@ -149,6 +149,7 @@ typedef struct USBDebugs {
 void usb_init(void);
 
 void set_address(unsigned char address);
+static void set_endpoint(unsigned char endpoint, short value, short mask);
 
 void configure_endpoint_control(unsigned char endpoint);
 void configure_endpoint_interrupt(unsigned char endpoint);
@@ -156,7 +157,7 @@ void configure_endpoint_interrupt(unsigned char endpoint);
 void clear_sram(void);
 void copy_rx_to_buffer(unsigned char endpoint, unsigned char length);
 void copy_buffer_to_tx(unsigned char endpoint);
-void set_hid_report(USBHIDReport *report, unsigned char size);
+void set_hid_report(USBHIDReport *report);
 
 void handle_out_packet(unsigned char current_endpoint,
     unsigned char no_of_bytes);

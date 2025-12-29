@@ -21,7 +21,7 @@ int main(void) {
         .buttons = 0
     };
 
-    set_hid_report(&hid_report, sizeof(hid_report));
+    set_hid_report(&hid_report);
 
     while(1);
 }
