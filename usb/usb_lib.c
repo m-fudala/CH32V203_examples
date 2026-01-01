@@ -206,6 +206,7 @@ void handle_setup_packet(unsigned char current_endpoint,
                                     (unsigned char *)
                                     &full_configuration_descriptor;
                             
+                            // Windows compatibility
                             if (usb.request.wLength == 0xFF) {
                                 usb.endpoints[current_endpoint].tx_bytes_to_send =
                                         sizeof(full_configuration_descriptor);

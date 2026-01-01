@@ -8,7 +8,7 @@
     that regular USB connects to PA12/PA11 and is named U1/USB, while the OTG
     connects to PB7/PB6 (despite what diagram in reference manual says) and is
     named U2/USBFS. Some CH32V203 models have both, some have one or the other.
-    This example shows use of the OTG FS USB module.
+    This example shows use of the USB Full-speed Device module.
 */
 
 #ifndef USB_LIB_H_
